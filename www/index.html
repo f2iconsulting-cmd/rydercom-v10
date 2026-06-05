@@ -7,12 +7,13 @@
     <style>
         body { font-family: monospace; padding: 15px; background: #121212; color: #aaa; text-align: center; }
         h1 { color: #ff9800; font-size: 22px; margin: 5px 0; }
-        p { color: #888; font-size: 13px; margin: 0 0 15px 0; }
+        p { color: #888; font-size: 13px; margin: 0 0 5px 0; }
+        .version { color: #444; font-size: 11px; margin-bottom: 15px; }
         button { width: 100%; padding: 18px; margin: 8px 0; font-size: 16px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; display: block; }
         .start { background: #2e7d32; color: white; }
         .share { background: #0288d1; color: white; }
-        .stop { background: #c62828; color: white; }
-        .copy { background: #37474f; color: #fff; padding: 10px; font-size: 14px; }
+        .stop  { background: #c62828; color: white; }
+        .copy  { background: #37474f; color: #fff; padding: 10px; font-size: 14px; }
         #status { font-size: 18px; font-weight: bold; color: #2196F3; margin: 15px; padding: 10px; border: 1px solid #333; background: #222; border-radius: 8px; }
         #console { text-align: left; background: #000; border: 1px solid #333; padding: 10px; border-radius: 6px; height: 200px; overflow-y: auto; font-size: 12px; color: #00ff00; margin-top: 15px; }
     </style>
@@ -21,141 +22,167 @@
 <body>
 
     <h1>🏍️ RyderCom — ENGINE 8_8_3</h1>
-    <p>Labo : Connexion Dynamique & Partage Extérieur</p>
-    
+    <p>Labo : Moteur LiveKit Natif + Partage Extérieur</p>
+    <div class="version">v1.1.0-labo</div>
+
     <div id="status">Statut : DÉCONNECTÉ</div>
-    
+
     <button class="start" onclick="connecterIntercom()">1. REJOINDRE L'INTERCOM</button>
     <button class="share" onclick="partagerSession()">📋 PARTAGER LE LIEN DE LA ROOM</button>
-    <button class="stop" onclick="deconnecterIntercom()">2. QUITTER L'INTERCOM</button>
-    <button class="copy" onclick="copierLogs()">📋 Copier les logs de la console</button>
+    <button class="stop"  onclick="deconnecterIntercom()">2. QUITTER L'INTERCOM</button>
+    <button class="copy"  onclick="copierLogs()">📋 Copier les logs</button>
 
-    <div id="console">--- Console Prête, Franck (Moteur 8_8_3) ---</div>
+    <div id="console">--- Console Prête v1.1.0 (Moteur LiveKit Natif) ---</div>
 
     <script>
         const { RyderComNativeAudio } = Capacitor.Plugins;
-        let logHistory = [];
-        let currentRoomName = "";
 
-        function ajouterLog(message) {
-            const consoleDiv = document.getElementById('console');
-            if (consoleDiv) {
-                const timestamp = new Date().toLocaleTimeString();
-                const ligne = `[${timestamp}] ${message}`;
-                logHistory.push(ligne);
-                consoleDiv.innerHTML += "<br>" + ligne;
-                consoleDiv.scrollTop = consoleDiv.scrollHeight;
-            }
+        // ── CONFIGURATION ──
+        const WS_URL      = "wss://testwave-zq4b8zeh.livekit.cloud";
+        const PUTER_TOKEN = "https://elegant-moon-856.puter.work/api/get-token";
+
+        let logHistory    = [];
+        let currentRoom   = "";
+        let currentToken  = "";
+
+        // ── LOGS ──
+        function log(msg) {
+            const d = new Date();
+            const t = d.getHours()+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');
+            const ligne = `[${t}] ${msg}`;
+            logHistory.push(ligne);
+            const c = document.getElementById('console');
+            c.innerHTML += "<br>" + ligne;
+            c.scrollTop = c.scrollHeight;
+            console.log('[LABO] ' + msg);
         }
 
         function copierLogs() {
-            const texteAEmporter = logHistory.join("\n");
-            navigator.clipboard.writeText(texteAEmporter).then(() => {
-                alert("Logs copiés dans le presse-papier !");
-            }).catch(err => {
-                alert("Erreur de copie automatique : " + err);
-            });
+            navigator.clipboard.writeText(logHistory.join("\n"))
+                .then(() => alert("Logs copiés !"))
+                .catch(err => alert("Erreur copie : " + err));
         }
 
-        // Branchement de l'écouteur d'état natif
+        // ── ÉCOUTEUR ÉTAT NATIF ──
         try {
             if (RyderComNativeAudio) {
                 RyderComNativeAudio.addListener('connectionStateChange', (info) => {
+                    const state = info.state ? info.state.toUpperCase() : 'INCONNU';
                     const statusDiv = document.getElementById('status');
-                    if (statusDiv) {
-                        statusDiv.innerText = "Statut : " + info.state.toUpperCase();
-                        if (info.state === 'connected') statusDiv.style.color = '#4CAF50';
-                        if (info.state === 'connecting' || info.state === 'reconnecting') statusDiv.style.color = '#ff9800';
-                        if (info.state === 'disconnected') statusDiv.style.color = '#f44336';
-                    }
-                    ajouterLog(`MOTEUR NATIF : État -> ${info.state.toUpperCase()}`);
+                    statusDiv.innerText = "Statut : " + state;
+                    if (state === 'CONNECTED')                          statusDiv.style.color = '#4CAF50';
+                    if (state === 'CONNECTING' || state === 'RECONNECTING') statusDiv.style.color = '#ff9800';
+                    if (state === 'DISCONNECTED')                       statusDiv.style.color = '#f44336';
+                    if (state === 'ERROR')                              statusDiv.style.color = '#ff0000';
+                    log(`MOTEUR NATIF → ${state}` + (info.error ? ' | ' + info.error : ''));
                 });
-                ajouterLog("Système d'écouteurs natifs branché avec succès.");
+                log("Plugin RyderComNativeAudio branché ✅");
             } else {
-                ajouterLog("Alerte : Le plugin RyderComNativeAudio n'est pas détecté par Capacitor.");
+                log("⚠️ Plugin RyderComNativeAudio NON DÉTECTÉ");
             }
         } catch(e) {
-            ajouterLog(`Crash Écouteurs : ${e.message}`);
+            log("Crash écouteurs : " + e.message);
         }
 
+        // ── CONNEXION ──
         async function connecterIntercom() {
-            ajouterLog("ACTION : Initialisation de la procédure 8_8_3.");
+            log("--- CONNEXION DÉMARRÉE ---");
             const statusDiv = document.getElementById('status');
-            if (statusDiv) {
-                statusDiv.style.color = '#ff9800';
-                statusDiv.innerText = "Génération des accès...";
-            }
+            statusDiv.style.color = '#ff9800';
+            statusDiv.innerText = "Génération de la room...";
 
             if (!RyderComNativeAudio) {
-                ajouterLog("ERREUR : Plugin natif manquant dans le conteneur.");
+                log("ERREUR : Plugin natif manquant");
                 return;
             }
 
-            // Génération stricte de la structure de Room de la version 8_8_3
-            currentRoomName = "room_" + Math.random().toString(36).substring(7) + "_" + Date.now();
-            ajouterLog(`Room générée localement : ${currentRoomName}`);
-
-            const wsUrl = "wss://testwave-zq4b8zeh.livekit.cloud";
-            // Token maître pur re-vérifié pour la communication globale
-            const tokenDirect = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsZHAiOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODA0NTE1NDUsImlzcyI6IkFQSUVlNDVQbjY3dG9qWiIsInN1YiI6Ik1vdG8tVGVzdC1GcmFuY2siLCJ2aWRlbyI6e3Jvb21Kb2luIjp0cnVlLCJyb29tIjoiTWV1dGUtTGFiby1Sb3V0aWVyIn19.O_WFczVy42v6df-SHrAVxzwjF5vf_vSqFe2c25IXBFo";
+            // Génération d'une room unique comme la v8.8.3
+            currentRoom = "room_" + Math.random().toString(36).substring(7) + "_" + Date.now();
+            const identity = "Moto-Franck-" + Math.random().toString(36).substring(5);
+            log(`Room : ${currentRoom}`);
+            log(`Identity : ${identity}`);
 
             try {
-                ajouterLog("Envoi des paramètres au moteur Java...");
-                await RyderComNativeAudio.joinNativeRoom({
-                    wsUrl: wsUrl,
-                    token: tokenDirect,
-                    sessionName: currentRoomName
+                // Appel Puter pour token frais — même logique v8.8.3
+                statusDiv.innerText = "Négociation token...";
+                log(`Appel Puter → ${PUTER_TOKEN}`);
+
+                const response = await fetch(PUTER_TOKEN, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        roomName: currentRoom,
+                        participantIdentity: identity
+                    })
                 });
-                ajouterLog("Succès : Données transmises. En attente de l'établissement du flux.");
-            } catch (err) {
-                if (statusDiv) {
-                    statusDiv.style.color = '#f44336';
-                    statusDiv.innerText = "Erreur : " + err.message;
+
+                if (!response.ok) {
+                    const txt = await response.text();
+                    throw new Error(`Puter HTTP ${response.status} : ${txt}`);
                 }
-                alert("Erreur native : " + err.message);
-                ajouterLog(`ÉCHEC CRITIQUE TRANSITION : ${err.message}`);
+
+                const data = await response.json();
+                if (!data.token) throw new Error("Token absent dans la réponse Puter");
+
+                currentToken = data.token;
+                log(`Token reçu ✅ (${currentToken.length} chars)`);
+
+                // Transfert au moteur LiveKit natif
+                statusDiv.innerText = "Lancement moteur natif...";
+                log(`joinNativeRoom → wsUrl=${WS_URL}`);
+
+                await RyderComNativeAudio.joinNativeRoom({
+                    wsUrl: WS_URL,
+                    token: currentToken
+                });
+
+                log("joinNativeRoom transmis ✅ — en attente état CONNECTED");
+
+            } catch (err) {
+                statusDiv.style.color = '#ff0000';
+                statusDiv.innerText = "Erreur : " + err.message;
+                log("ERREUR : " + err.message);
+                alert("Erreur : " + err.message);
             }
         }
 
-        // Fonction de partage natif Android pour envoyer le lien sur ton ordinateur
+        // ── PARTAGE ──
         async function partagerSession() {
-            if (!currentRoomName) {
-                alert("Veuillez d'abord lancer la connexion pour générer une room.");
+            if (!currentRoom) {
+                alert("Lance d'abord la connexion.");
                 return;
             }
-            
-            // Construction de l'URL de l'intercom pour que ton PC rejoigne le même salon
-            const urlPartage = `https://testwave-zq4b8zeh.livekit.cloud/rooms/${currentRoomName}`;
-            ajouterLog(`Tentative de partage de l'URL : ${urlPartage}`);
-
+            const url = `https://elegant-moon-856.puter.work?room=${currentRoom}`;
+            log(`Partage URL : ${url}`);
             if (navigator.share) {
                 try {
                     await navigator.share({
                         title: 'Rejoindre mon Intercom RyderCom',
-                        text: `Clique sur ce lien pour te connecter en audio avec mon téléphone (Room: ${currentRoomName})`,
-                        url: urlPartage
+                        text: `Room : ${currentRoom}`,
+                        url: url
                     });
-                    ajouterLog("Menu de partage natif ouvert avec succès.");
+                    log("Partage natif envoyé ✅");
                 } catch (err) {
-                    ajouterLog(`Alerte Partage Annulé/Échoué : ${err.message}`);
+                    log("Partage annulé : " + err.message);
                 }
             } else {
-                // Secours si le navigateur bloque l'API Share
-                ajouterLog("L'API de partage n'est pas supportée. Copie manuelle dans le presse-papier.");
-                navigator.clipboard.writeText(urlPartage);
-                alert("Lien de la Room copié ! Envoie-le toi sur ton PC : " + urlPartage);
+                navigator.clipboard.writeText(url);
+                alert("Lien copié :\n" + url);
+                log("Lien copié dans presse-papier");
             }
         }
 
+        // ── DÉCONNEXION ──
         function deconnecterIntercom() {
-            ajouterLog("ACTION : Fermeture demandée.");
+            log("--- DÉCONNEXION ---");
             if (RyderComNativeAudio) {
                 RyderComNativeAudio.leaveNativeRoom()
                     .then(() => {
-                        ajouterLog("Session fermée proprement.");
-                        currentRoomName = "";
+                        log("Session fermée ✅");
+                        currentRoom = "";
+                        currentToken = "";
                     })
-                    .catch(err => ajouterLog(`Erreur fermeture : ${err.message}`));
+                    .catch(err => log("Erreur fermeture : " + err.message));
             }
         }
     </script>
