@@ -1,0 +1,25 @@
+{
+  "name": "rydercom-native-poc",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/f2iconsulting-cmd/rydercom-native-poc.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/f2iconsulting-cmd/rydercom-native-poc/issues"
+  },
+  "homepage": "https://github.com/f2iconsulting-cmd/rydercom-native-poc#readme",
+  "dependencies": {
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0"
+  }
+}
