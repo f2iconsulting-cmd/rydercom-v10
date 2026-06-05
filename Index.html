@@ -3,68 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RyderCom Native PoC</title>
+    <title>RyderCom Lab Console</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; text-align: center; background: #1a1a1a; color: white; }
-        h1 { color: #ff9800; font-size: 24px; margin-bottom: 5px; }
-        p { color: #bbb; font-size: 14px; margin-bottom: 30px; }
-        button { width: 90%; padding: 25px; margin: 15px auto; font-size: 18px; font-weight: bold; border-radius: 12px; border: none; display: block; cursor: pointer; }
-        .start { background: #4CAF50; color: white; }
-        .stop { background: #f44336; color: white; }
-        #status { font-size: 20px; font-weight: bold; color: #2196F3; margin: 25px; padding: 10px; border: 1px solid #333; background: #222; border-radius: 8px; }
+        body { font-family: monospace; padding: 15px; background: #121212; color: #aaa; text-align: center; }
+        h1 { color: #ff9800; font-size: 22px; margin: 5px 0; }
+        button { width: 100%; padding: 18px; margin: 10px 0; font-size: 16px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; }
+        .start { background: #2e7d32; color: white; }
+        .stop { background: #c62828; color: white; }
+        .copy { background: #37474f; color: #fff; padding: 10px; font-size: 14px; margin-top: 5px; }
+        #console { text-align: left; background: #000; border: 1px solid #333; padding: 10px; border-radius: 6px; height: 250px; overflow-y: auto; font-size: 12px; color: #00ff00; margin-top: 15px; }
     </style>
     <script src="capacitor.js"></script>
 </head>
 <body>
 
-    <h1>🏍️ RyderCom — VRAI LABO DIRECT</h1>
-    <p>Phase Laboratoire : Connexion directe via le vrai token LiveKit TestWave</p>
-
-    <div id="status">Statut : DÉCONNECTÉ</div>
-
+    <h1>🏍️ RyderCom — CONSOLE LOGS</h1>
+    
     <button class="start" onclick="connecterIntercom()">1. REJOINDRE L'INTERCOM</button>
     <button class="stop" onclick="deconnecterIntercom()">2. QUITTER L'INTERCOM</button>
+    <button class="copy" onclick="copierLogs()">📋 Copier les logs de la console</button>
+
+    <div id="console">--- Console Prête, Franck ---</div>
 
     <script>
         const { RyderComNativeAudio } = Capacitor.Plugins;
+        let logHistory = [];
 
-        RyderComNativeAudio.addListener('connectionStateChange', (info) => {
-            const statusDiv = document.getElementById('status');
-            statusDiv.innerText = "Statut : " + info.state.toUpperCase();
-            if (info.state === 'connected') statusDiv.style.color = '#4CAF50';
-            if (info.state === 'connecting' || info.state === 'reconnecting') statusDiv.style.color = '#ff9800';
-            if (info.state === 'disconnected') statusDiv.style.color = '#f44336';
-        });
+        function ajouterLog(message) {
+            const consoleDiv = document.getElementById('console');
+            const timestamp = new Date().toLocaleTimeString();
+            const ligne = `[${timestamp}] ${message}`;
+            logHistory.push(ligne);
+            consoleDiv.innerHTML += "<br>" + ligne;
+            consoleDiv.scrollTop = consoleDiv.scrollHeight; // Auto-scroll vers le bas
+        }
+
+        function copierLogs() {
+            const texteAEmporter = logHistory.join("\n");
+            navigator.clipboard.writeText(texteAEmporter).then(() => {
+                alert("Logs copiés dans le presse-papier !");
+            }).catch(err => {
+                alert("Erreur de copie automatique : " + err);
+            });
+        }
+
+        // Écouteur natif
+        try {
+            RyderComNativeAudio.addListener('connectionStateChange', (info) => {
+                ajouterLog(`MOTEUR NATIF : État de connexion changé -> ${info.state.toUpperCase()}`);
+            });
+            ajouterLog("Système d'écouteurs natifs branché.");
+        } catch(e) {
+            ajouterLog(`Alerte Écouteurs : Absent du container Android réel (${e.message})`);
+        }
 
         async function connecterIntercom() {
-            const statusDiv = document.getElementById('status');
-            statusDiv.style.color = '#ff9800';
-            statusDiv.innerText = "Lancement du moteur natif TestWave (Token Validé)...";
-
+            ajouterLog("Appui détecté : Lancement de la procédure.");
             const wsUrl = "wss://testwave-zq4b8zeh.livekit.cloud";
             
-            // Ligne 47 : Ton vrai jeton d'accès généré à l'instant par ton Codespace
+            // On conserve ton token actuel généré pour voir ce que le Java en pense
             const tokenDirect = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsZHAiOjE3ODA0NTE1NDUslmI1Y2I2IkZQSV1NDVObjY3dG9qWgpyb29tOiBNZXV0ZS1MYWJvLVJvdXRpZXIKaWRlbnRpdHk6IE1vdG8tVGVzdC1GcmFuY2sKand0X2F1dGg6IHRydWV.O_WFczVy42v6df-SHrAVxzwjF5vf_vSqFe2c25IXBFo";
 
+            ajouterLog(`URL ciblée : ${wsUrl}`);
+            ajouterLog(`Token injecté (longueur) : ${tokenDirect.length} caractères`);
+
             try {
-                // On fonce direct sur TestWave sans passer par Puter
+                ajouterLog("Appel de RyderComNativeAudio.joinNativeRoom()...");
+                
                 await RyderComNativeAudio.joinNativeRoom({
                     wsUrl: wsUrl,
                     token: tokenDirect,
                     sessionName: "Intercom Motard — Canal Labo"
                 });
 
+                ajouterLog("Succès : Demande transmise au moteur Java.");
+
             } catch (err) {
-                statusDiv.style.color = '#f44336';
-                statusDiv.innerText = "Erreur : " + err.message;
-                alert("Erreur native : " + err.message);
+                ajouterLog(`ÉCHEC CRITIQUE : ${err.message}`);
+                // Si l'erreur renvoie un objet complet, on l'affiche
+                if (err.stack) ajouterLog(`Détails de la pile : ${err.stack}`);
             }
         }
 
         function deconnecterIntercom() {
-            RyderComNativeAudio.leaveNativeRoom().catch(err => {
-                alert("Erreur de coupure : " + err);
-            });
+            ajouterLog("Appui détecté : Fermeture de la session...");
+            RyderComNativeAudio.leaveNativeRoom()
+                .then(() => ajouterLog("Session fermée avec succès."))
+                .catch(err => ajouterLog(`Erreur à la fermeture : ${err.message}`));
         }
     </script>
 </body>
