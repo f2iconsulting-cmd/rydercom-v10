@@ -47,7 +47,11 @@
             const participantName = "Moto-Test-Franck";
 
             try {
-                const response = await fetch(`https://elegant-moon-856.puter.work/token?room=${roomName}&identity=${participantName}`);
+                const response = await fetch(`https://elegant-moon-856.puter.work/api/get-token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roomName: roomName, participantIdentity: participantName })
+                });
                 if (!response.ok) throw new Error("Échec de sécurisation du Token");
 
                 const data = await response.json();
