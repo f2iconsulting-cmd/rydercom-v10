@@ -1,5 +1,5 @@
 {
-  "appId": "com.f2iconsulting.rydercompoc",
-  "appName": "RyderCom POC",
-  "webDir": "."
+  "appId": "com.rydercom.nativeaudio",
+  "appName": "RyderCom",
+  "webDir": "www"
 }
