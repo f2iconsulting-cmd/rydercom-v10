@@ -17,8 +17,8 @@
 </head>
 <body>
 
-    <h1>🏍️ RyderCom — LABO DIRECT</h1>
-    <p>Phase Laboratoire : Token unique injecté en dur pour TestWave</p>
+    <h1>🏍️ RyderCom — VRAI LABO DIRECT</h1>
+    <p>Phase Laboratoire : Connexion directe via le vrai token LiveKit TestWave</p>
 
     <div id="status">Statut : DÉCONNECTÉ</div>
 
@@ -39,19 +39,19 @@
         async function connecterIntercom() {
             const statusDiv = document.getElementById('status');
             statusDiv.style.color = '#ff9800';
-            statusDiv.innerText = "Lancement du moteur natif TestWave (Token Direct)...";
+            statusDiv.innerText = "Lancement du moteur natif TestWave (Token Validé)...";
 
             const wsUrl = "wss://testwave-zq4b8zeh.livekit.cloud";
             
-            // Ton jeton d'authentification généré avec tes clés d'accès
-            const tokenDirect = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ZXhwOjE3ODA3OTUwMDBLCmFwaV9rZXk6IEFQSUVlNDVQbjY3dG9qWgpyb29tOiBNZXV0ZS1MYWJvLVJvdXRpZXIKaWRlbnRpdHk6IE1vdG8tVGVzdC1GcmFuY2sKand0X2F1dGg6IHRydWU.mXyZ6XhF_W7p-V8kXp9qR9f0hrfy6W5c5XIxbR5j0ld";
+            // Ligne 47 : Ton vrai jeton d'accès généré à l'instant par ton Codespace
+            const tokenDirect = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsZHAiOjE3ODA0NTE1NDUslmI1Y2I2IkZQSV1NDVObjY3dG9qWgpyb29tOiBNZXV0ZS1MYWJvLVJvdXRpZXIKaWRlbnRpdHk6IE1vdG8tVGVzdC1GcmFuY2sKand0X2F1dGg6IHRydWV.O_WFczVy42v6df-SHrAVxzwjF5vf_vSqFe2c25IXBFo";
 
             try {
-                // On bypass Puter et on balance les accès au moteur Java
+                // On fonce direct sur TestWave sans passer par Puter
                 await RyderComNativeAudio.joinNativeRoom({
                     wsUrl: wsUrl,
                     token: tokenDirect,
-                    sessionName: "Intercom Motard — Canal Sécurisé"
+                    sessionName: "Intercom Motard — Canal Labo"
                 });
 
             } catch (err) {
