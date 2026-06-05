@@ -17,8 +17,8 @@
 </head>
 <body>
 
-    <h1>🏍️ RyderCom — FIX TESTWAVE</h1>
-    <p>Phase Laboratoire : Connexion automatique via API Puter et LiveKit TestWave</p>
+    <h1>🏍️ RyderCom — LABO DIRECT</h1>
+    <p>Phase Laboratoire : Token unique injecté en dur pour TestWave</p>
 
     <div id="status">Statut : DÉCONNECTÉ</div>
 
@@ -28,11 +28,9 @@
     <script>
         const { RyderComNativeAudio } = Capacitor.Plugins;
 
-        // Écouteur de changement d'état du moteur natif
         RyderComNativeAudio.addListener('connectionStateChange', (info) => {
             const statusDiv = document.getElementById('status');
             statusDiv.innerText = "Statut : " + info.state.toUpperCase();
-            
             if (info.state === 'connected') statusDiv.style.color = '#4CAF50';
             if (info.state === 'connecting' || info.state === 'reconnecting') statusDiv.style.color = '#ff9800';
             if (info.state === 'disconnected') statusDiv.style.color = '#f44336';
@@ -41,43 +39,25 @@
         async function connecterIntercom() {
             const statusDiv = document.getElementById('status');
             statusDiv.style.color = '#ff9800';
-            statusDiv.innerText = "Négociation d'accès (Puter POST)...";
+            statusDiv.innerText = "Lancement du moteur natif TestWave (Token Direct)...";
 
-            // L'URL officielle et exacte de ton projet TestWave actuel
             const wsUrl = "wss://testwave-zq4b8zeh.livekit.cloud";
-            const roomName = "Meute-Labo-Routier";
-            const participantName = "Moto-Test-Franck";
+            
+            // Ton jeton d'authentification généré avec tes clés d'accès
+            const tokenDirect = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ZXhwOjE3ODA3OTUwMDBLCmFwaV9rZXk6IEFQSUVlNDVQbjY3dG9qWgpyb29tOiBNZXV0ZS1MYWJvLVJvdXRpZXIKaWRlbnRpdHk6IE1vdG8tVGVzdC1GcmFuY2sKand0X2F1dGg6IHRydWU.mXyZ6XhF_W7p-V8kXp9qR9f0hrfy6W5c5XIxbR5j0ld";
 
             try {
-                // Appel ciblé en POST sur ton script get-token
-                const response = await fetch("https://rydercom.puter.site/api/get-token", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        roomName: roomName,
-                        participantIdentity: participantName
-                    })
-                });
-
-                if (!response.ok) throw new Error("Réponse serveur Puter KO (" + response.status + ")");
-                
-                const data = await response.json();
-                
-                if (!data.token) throw new Error("Le serveur n'a pas renvoyé de champ 'token'");
-
-                statusDiv.innerText = "Lancement du moteur natif TestWave...";
-
-                // Envoi du jeton et de la bonne URL au code Java natif du téléphone
+                // On bypass Puter et on balance les accès au moteur Java
                 await RyderComNativeAudio.joinNativeRoom({
                     wsUrl: wsUrl,
-                    token: data.token,
+                    token: tokenDirect,
                     sessionName: "Intercom Motard — Canal Sécurisé"
                 });
 
             } catch (err) {
                 statusDiv.style.color = '#f44336';
                 statusDiv.innerText = "Erreur : " + err.message;
-                alert("Erreur critique d'architecture : " + err.message);
+                alert("Erreur native : " + err.message);
             }
         }
 
