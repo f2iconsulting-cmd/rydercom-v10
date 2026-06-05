@@ -1,0 +1,107 @@
+name: Build RyderCom Native PoC APK
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Inject LiveKit & Desugaring gradle config
+        run: |
+          cat > android/app/gradle-extra-app.gradle << 'GRADLE_EOF'
+          android {
+              compileOptions {
+                  coreLibraryDesugaringEnabled true
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+              defaultConfig {
+                  multiDexEnabled true
+              }
+              packagingOptions {
+                  resources {
+                      excludes += [
+                          'META-INF/INDEX.LIST',
+                          'META-INF/io.netty.versions.properties',
+                          'META-INF/DEPENDENCIES'
+                      ]
+                  }
+              }
+          }
+
+          dependencies {
+              implementation 'io.livekit:livekit-android:2.4.0'
+              coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+              implementation 'androidx.multidex:multidex:2.0.1'
+          }
+          GRADLE_EOF
+          echo "✅ gradle-extra-app.gradle écrit"
+
+      - name: Apply gradle-extra-app.gradle in app/build.gradle
+        run: |
+          APPLY_LINE="apply from: 'gradle-extra-app.gradle'"
+          if ! grep -qF "$APPLY_LINE" android/app/build.gradle; then
+            echo "" >> android/app/build.gradle
+            echo "$APPLY_LINE" >> android/app/build.gradle
+            echo "✅ Ligne apply from ajoutée"
+          else
+            echo "ℹ️ Ligne apply from déjà présente"
+          fi
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Build Debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.daemon=false"
+
+      - name: Build Release APK (unsigned)
+        working-directory: android
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.daemon=false"
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: rydercom-poc-debug-${{ github.run_number }}
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+
+      - name: Upload Release APK (unsigned)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rydercom-poc-release-unsigned-${{ github.run_number }}
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 14
