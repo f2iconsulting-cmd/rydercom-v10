@@ -28,14 +28,13 @@
     <script>
         const { RyderComNativeAudio } = Capacitor.Plugins;
 
-        // Écouteur universel d'état (Compatible Android / iOS pour le futur)
         RyderComNativeAudio.addListener('connectionStateChange', (info) => {
             const statusDiv = document.getElementById('status');
             statusDiv.innerText = "Statut : " + info.state.toUpperCase();
-            
-            if (info.state === 'connected') statusDiv.style.color = '#4CAF50';
-            if (info.state === 'connecting' || info.state === 'reconnecting') statusDiv.style.color = '#ff9800';
-            if (info.state === 'disconnected') statusDiv.style.color = '#f44336';
+            if (info.state === 'CONNECTED') statusDiv.style.color = '#4CAF50';
+            if (info.state === 'CONNECTING' || info.state === 'RECONNECTING') statusDiv.style.color = '#ff9800';
+            if (info.state === 'DISCONNECTED') statusDiv.style.color = '#f44336';
+            if (info.state === 'ERROR') statusDiv.style.color = '#ff0000';
         });
 
         async function connecterIntercom() {
@@ -43,26 +42,21 @@
             statusDiv.style.color = '#ff9800';
             statusDiv.innerText = "Négociation d'accès...";
 
-            // STRUCTURE PRO & SÉCURISÉE : 
-            // L'URL de production officielle de ton LiveKit et l'appel de génération automatique
-            const wsUrl = "wss://rydercom-4w764w6b.livekit.cloud";
+            const wsUrl = "wss://testwave-zq4b8zeh.livekit.cloud";
             const roomName = "Meute-Labo-Routier";
             const participantName = "Moto-Test-Franck";
 
             try {
-                // Routage vers ton service d'authentification sécurisé existant
-                const response = await fetch(`https://rydercom.puter.site/token?room=${roomName}&identity=${participantName}`);
+                const response = await fetch(`https://elegant-moon-856.puter.work/token?room=${roomName}&identity=${participantName}`);
                 if (!response.ok) throw new Error("Échec de sécurisation du Token");
-                
+
                 const data = await response.json();
-                
+
                 statusDiv.innerText = "Lancement du moteur natif...";
 
-                // Transfert des jetons à la couche OS via le plugin Capacitor
                 await RyderComNativeAudio.joinNativeRoom({
                     wsUrl: wsUrl,
-                    token: data.token,
-                    sessionName: "Intercom Motard — Canal Sécurisé"
+                    token: data.token
                 });
 
             } catch (err) {
@@ -74,7 +68,7 @@
 
         function deconnecterIntercom() {
             RyderComNativeAudio.leaveNativeRoom().catch(err => {
-                alert("Erreur de coupure : " + err);
+                console.error("Erreur coupure : " + err);
             });
         }
     </script>
