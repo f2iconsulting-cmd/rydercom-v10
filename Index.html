@@ -20,7 +20,7 @@
 <body>
     <h1>🏍️ RyderCom — Architecture Audio Native</h1>
     <p>Phase Laboratoire — Isolation et validation du micro en tâche de fond</p>
-    <div class="version">v1.0.3-labo</div>
+    <div class="version">v1.0.4-auto</div>
 
     <div id="status">Statut : DÉCONNECTÉ</div>
     <div id="log">[ Logs en attente... ]</div>
@@ -31,10 +31,8 @@
     <script>
         const { RyderComNativeAudio } = Capacitor.Plugins;
 
-        // ── CONFIGURATION LIVEKIT ──
-        const API_KEY    = "APIEe45Pn67tojZ";
-        const API_SECRET = "MOfHbTUQ0fZ7YfW8neBf9P9f0hrfy6W5c5XIxbR5j0ld";
-        const WS_URL     = "wss://testwave-zq4b8zeh.livekit.cloud";
+        // On reprend tes vraies configurations officielles de production
+        const WS_URL    = "wss://rydercom-4w764w6b.livekit.cloud";
         const ROOM_NAME  = "Meute-Labo-Routier";
         const IDENTITY   = "Moto-Test-Franck";
 
@@ -52,77 +50,40 @@
             const state = info.state ? info.state.toUpperCase() : 'INCONNU';
             statusDiv.innerText = "Statut : " + state;
             log('État reçu : ' + state + (info.error ? ' | Erreur : ' + info.error : ''));
-            if (state === 'CONNECTED')    statusDiv.style.color = '#4CAF50';
+            if (state === 'CONNECTED')   statusDiv.style.color = '#4CAF50';
             if (state === 'CONNECTING' || state === 'RECONNECTING') statusDiv.style.color = '#ff9800';
             if (state === 'DISCONNECTED') statusDiv.style.color = '#f44336';
             if (state === 'ERROR')        statusDiv.style.color = '#ff0000';
         });
 
-        function base64UrlEncode(strOrBuffer) {
-            let binary = '';
-            const bytes = (typeof strOrBuffer === 'string')
-                ? new TextEncoder().encode(strOrBuffer)
-                : new Uint8Array(strOrBuffer);
-            for (let i = 0; i < bytes.byteLength; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            return btoa(binary)
-                .replace(/=/g, '')
-                .replace(/\+/g, '-')
-                .replace(/\//g, '_');
-        }
-
-        async function generateToken() {
-            log('Génération JWT locale...');
-            const now = Math.floor(Date.now() / 1000);
-            const payload = {
-                iss: API_KEY,
-                sub: IDENTITY,
-                nbf: now - 10,
-                exp: now + 7200,
-                video: {
-                    room: ROOM_NAME,
-                    roomJoin: true,
-                    canPublish: true,
-                    canSubscribe: true,
-                    canPublishData: true
-                }
-            };
-            const header = { alg: 'HS256', typ: 'JWT' };
-            const encodedHeader  = base64UrlEncode(JSON.stringify(header));
-            const encodedPayload = base64UrlEncode(JSON.stringify(payload));
-            const dataToSign = new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`);
-            const secretKey = await crypto.subtle.importKey(
-                'raw',
-                new TextEncoder().encode(API_SECRET),
-                { name: 'HMAC', hash: 'SHA-256' },
-                false, ['sign']
-            );
-            const signature = await crypto.subtle.sign('HMAC', secretKey, dataToSign);
-            const token = `${encodedHeader}.${encodedPayload}.${base64UrlEncode(signature)}`;
-            log('Token JWT généré ✅ (' + token.length + ' chars)');
-            return token;
-        }
-
         async function connecterIntercom() {
             const statusDiv = document.getElementById('status');
             statusDiv.style.color = '#ff9800';
-            statusDiv.innerText = "Génération du token...";
-            log('--- CONNEXION DÉMARRÉE ---');
+            statusDiv.innerText = "Récupération du token...";
+            log('--- CONNEXION AUTOMATIQUE DÉMARRÉE ---');
+            
             try {
-                const token = await generateToken();
+                // On utilise ton serveur Puter officiel comme sur la version stable
+                const response = await fetch(`https://rydercom.puter.site/token?room=${ROOM_NAME}&identity=${IDENTITY}`);
+                if (!response.ok) throw new Error("Impossible de récupérer le token depuis Puter");
+                
+                const data = await response.json();
+                log('Token récupéré avec succès via Puter ✅');
+
                 statusDiv.innerText = "Appel plugin natif...";
-                log('Appel joinNativeRoom → wsUrl=' + WS_URL);
+                log('Appel joinNativeRoom → Envoi du token à Android');
+                
+                // On envoie le token reçu au moteur Java natif
                 await RyderComNativeAudio.joinNativeRoom({
                     wsUrl: WS_URL,
-                    token: token
+                    token: data.token
                 });
+                
                 log('joinNativeRoom appelé ✅');
             } catch (err) {
                 statusDiv.style.color = '#ff0000';
                 statusDiv.innerText = "Erreur : " + err.message;
                 log('ERREUR : ' + err.message);
-                log('STACK : ' + (err.stack || 'aucun'));
                 alert("Erreur : " + err.message);
             }
         }
