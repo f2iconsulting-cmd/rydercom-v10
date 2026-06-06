@@ -13,11 +13,12 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import io.livekit.android.LiveKit
+import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
-import io.livekit.android.room.RoomListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class RyderComForegroundService : Service() {
@@ -70,38 +71,44 @@ class RyderComForegroundService : Service() {
     fun connectToLiveKit(wsUrl: String, token: String, sessionName: String) {
         Log.i(TAG, "connectToLiveKit wsUrl=$wsUrl")
         updateState("CONNECTING")
-        room = LiveKit.create(applicationContext)
-        room?.addListener(object : RoomListener {
-            override fun onConnected(room: Room) {
-                Log.i(TAG, "onConnected OK")
-                updateState("CONNECTED")
-                updateNotification("Connecte - $sessionName")
-                enableMicrophone()
-            }
-            override fun onDisconnected(room: Room, error: Exception?) {
-                Log.w(TAG, "onDisconnected: ${error?.message}")
-                updateState("DISCONNECTED")
-                updateNotification("Deconnecte")
-            }
-            override fun onReconnecting(room: Room) {
-                Log.i(TAG, "onReconnecting")
-                updateState("RECONNECTING")
-                updateNotification("Reconnexion zone blanche...")
-            }
-            override fun onReconnected(room: Room) {
-                Log.i(TAG, "onReconnected OK")
-                updateState("CONNECTED")
-                updateNotification("Reconnecte - $sessionName")
-            }
-            override fun onFailedToConnect(room: Room, error: Exception) {
-                Log.e(TAG, "onFailedToConnect: ${error.message}")
-                updateState("ERROR")
-                updateNotification("Echec connexion")
-            }
-        })
+
         serviceScope.launch {
             try {
-                room?.connect(wsUrl, token)
+                val newRoom = LiveKit.create(applicationContext)
+                room = newRoom
+
+                // Ecoute des evenements via Flow (API LiveKit 2.4.0)
+                launch {
+                    newRoom.events.collectLatest { event ->
+                        when (event) {
+                            is RoomEvent.Connected -> {
+                                updateState("CONNECTED")
+                                updateNotification("Connecte - $sessionName")
+                                enableMicrophone()
+                            }
+                            is RoomEvent.Disconnected -> {
+                                updateState("DISCONNECTED")
+                                updateNotification("Deconnecte")
+                            }
+                            is RoomEvent.Reconnecting -> {
+                                updateState("RECONNECTING")
+                                updateNotification("Reconnexion zone blanche...")
+                            }
+                            is RoomEvent.Reconnected -> {
+                                updateState("CONNECTED")
+                                updateNotification("Reconnecte - $sessionName")
+                            }
+                            is RoomEvent.FailedToConnect -> {
+                                updateState("ERROR")
+                                updateNotification("Echec connexion")
+                            }
+                            else -> {}
+                        }
+                    }
+                }
+
+                newRoom.connect(wsUrl, token)
+
             } catch (e: Exception) {
                 Log.e(TAG, "Erreur connect: ${e.message}")
                 updateState("ERROR")
