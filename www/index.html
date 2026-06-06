@@ -27,14 +27,15 @@
 
     <h1>🏍️ RyderCom — ENGINE 8_8_3</h1>
     <p>Labo : Moteur LiveKit Natif + Partage Extérieur</p>
-    <div class="version">v1.5.0-labo-build20</div>
+    <div class="version">v1.6.0-labo-build21</div>
 
     <div id="status">Statut : DÉCONNECTÉ</div>
 
     <div class="metadata-box">
+        <div class="metadata-line"><span>Statut SDK local :</span><span id="meta-sdk" class="metadata-val">-</span></div>
+        <div class="metadata-line"><span>Statut Cloud LiveKit :</span><span id="meta-cloud" class="metadata-val">-</span></div>
         <div class="metadata-line"><span>Room ID active :</span><span id="meta-room" class="metadata-val">-</span></div>
         <div class="metadata-line"><span>User Identity :</span><span id="meta-user" class="metadata-val">-</span></div>
-        <div class="metadata-line"><span>Session ID serveur :</span><span id="meta-sid" class="metadata-val">-</span></div>
     </div>
 
     <div class="metadata-box" style="border-color: #0288d1;">
@@ -77,6 +78,39 @@
             s.style.color = color;
         }
 
+        let cloudPollInterval = null;
+
+        function startCloudPoll() {
+            if (cloudPollInterval) clearInterval(cloudPollInterval);
+            cloudPollInterval = setInterval(async () => {
+                if (!currentRoom) return;
+                try {
+                    const r = await fetch("https://helpful-flower-4129.puter.work/api/room-participants", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ roomName: currentRoom })
+                    });
+                    const cloudEl = document.getElementById("meta-cloud");
+                    if (r.ok) {
+                        const data = await r.json();
+                        const count = Array.isArray(data) ? data.length : "?";
+                        cloudEl.innerText = "ACTIVE (" + count + " participant(s))";
+                        cloudEl.style.color = "#4CAF50";
+                    } else {
+                        cloudEl.innerText = "Session fermee";
+                        cloudEl.style.color = "#f44336";
+                    }
+                } catch(e) {
+                    document.getElementById("meta-cloud").innerText = "Erreur cloud";
+                }
+            }, 10000);
+        }
+
+        function stopCloudPoll() {
+            if (cloudPollInterval) { clearInterval(cloudPollInterval); cloudPollInterval = null; }
+            document.getElementById("meta-cloud").innerText = "-";
+        }
+
         function copierLogs() {
             navigator.clipboard.writeText(logHistory.join("\n"))
                 .then(() => alert("Logs copiés !"))
@@ -88,6 +122,7 @@
                 RyderComNativeAudio.addListener("connectionStateChange", (info) => {
                     const state = info.state || "INCONNU";
 
+                    document.getElementById("meta-sdk").innerText = state;
                     if (state === "CONNECTED") {
                         setStatus("CONNECTÉ ✅", "#4CAF50");
                         log("CONNECTÉ au serveur LiveKit ✅");
@@ -190,6 +225,7 @@
                 });
 
                 log("joinNativeRoom transmis ✅");
+                startCloudPoll();
 
             } catch (err) {
                 setStatus("ERREUR ❌", "#ff0000");
@@ -252,6 +288,7 @@
                 setStatus("Lancement moteur natif...", "#ff9800");
                 await RyderComNativeAudio.joinNativeRoom({ wsUrl: WS_URL, token: currentToken, sessionName: currentRoom });
                 log("joinNativeRoom transmis ✅");
+                startCloudPoll();
             } catch(err) {
                 setStatus("ERREUR ❌", "#ff0000");
                 log("ERREUR : " + err.message);
@@ -264,6 +301,7 @@
                 RyderComNativeAudio.leaveNativeRoom()
                     .then(() => {
                         log("Fermeture session natif ✅");
+                        stopCloudPoll();
                         document.getElementById("meta-room").innerText = "-";
                         document.getElementById("meta-user").innerText = "-";
                         document.getElementById("meta-sid").innerText = "-";

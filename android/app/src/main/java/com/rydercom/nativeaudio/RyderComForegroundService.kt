@@ -7,6 +7,10 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
@@ -19,6 +23,7 @@ import io.livekit.android.room.Room
 import io.livekit.android.room.track.LocalAudioTrackOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -45,10 +50,57 @@ class RyderComForegroundService : Service() {
     private var room: Room? = null
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
+    private var eventsJob: Job? = null
+
+    private var savedWsUrl: String? = null
+    private var savedToken: String? = null
+    private var savedSessionName: String? = null
+    private var isZoneBlanche = false
+
+    private lateinit var connectivityManager: ConnectivityManager
+
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onLost(network: Network) {
+            super.onLost(network)
+            if (!isZoneBlanche) {
+                isZoneBlanche = true
+                Log.w(TAG, "[RESEAU] Perte signal — Zone Blanche")
+                updateState("RECONNECTING")
+                updateNotification("Zone blanche - Recherche signal...")
+            }
+        }
+
+        override fun onAvailable(network: Network) {
+            super.onAvailable(network)
+            if (isZoneBlanche && savedWsUrl != null && savedToken != null) {
+                isZoneBlanche = false
+                Log.i(TAG, "[RESEAU] Signal retabli — Reconnexion LiveKit")
+                serviceScope.launch {
+                    try {
+                        updateNotification("Reconnexion au groupe...")
+                        room?.connect(savedWsUrl!!, savedToken!!)
+                        Log.i(TAG, "[LiveKit] Reconnexion reussie")
+                        room?.localParticipant?.setMicrophoneEnabled(true)
+                        updateState("CONNECTED")
+                        updateNotification("Connecte - ${savedSessionName ?: ""}")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "[ERREUR] Echec reconnexion: ${e.message}")
+                        isZoneBlanche = true
+                        updateState("RECONNECTING")
+                    }
+                }
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val networkRequest = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
         Log.i(TAG, "Service cree")
     }
 
@@ -60,6 +112,7 @@ class RyderComForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onDestroy() {
+        try { connectivityManager.unregisterNetworkCallback(networkCallback) } catch (e: Exception) {}
         serviceJob.cancel()
         room?.disconnect()
         room = null
@@ -72,6 +125,10 @@ class RyderComForegroundService : Service() {
 
     fun connectToLiveKit(wsUrl: String, token: String, sessionName: String) {
         Log.i(TAG, "connectToLiveKit wsUrl=$wsUrl room=$sessionName")
+        savedWsUrl = wsUrl
+        savedToken = token
+        savedSessionName = sessionName
+        isZoneBlanche = false
         updateState("CONNECTING")
 
         val localAudioOptions = LocalAudioTrackOptions(
@@ -85,29 +142,20 @@ class RyderComForegroundService : Service() {
         val newRoom = LiveKit.create(applicationContext, roomOptions)
         room = newRoom
 
-        serviceScope.launch {
+        // Ecoute des events jusqu a CONNECTED puis SDK rendu aveugle
+        eventsJob = serviceScope.launch {
             newRoom.events.events.collect { event ->
                 when (event) {
                     is RoomEvent.Connected -> {
+                        Log.i(TAG, "RoomEvent.Connected — SDK rendu aveugle")
                         updateState("CONNECTED")
                         updateNotification("Connecte - $sessionName")
                         enableMicrophone()
-                    }
-                    is RoomEvent.Disconnected -> {
-                        updateState("DISCONNECTED")
-                        updateNotification("Deconnecte")
-                    }
-                    is RoomEvent.Reconnecting -> {
-                        updateState("RECONNECTING")
-                        updateNotification("Reconnexion zone blanche...")
-                        enableMicrophone()
-                    }
-                    is RoomEvent.Reconnected -> {
-                        updateState("CONNECTED")
-                        updateNotification("Reconnecte - $sessionName")
-                        enableMicrophone()
+                        // SDK aveugle : on annule l ecoute des events
+                        eventsJob?.cancel()
                     }
                     is RoomEvent.FailedToConnect -> {
+                        Log.e(TAG, "RoomEvent.FailedToConnect")
                         updateState("ERROR")
                         updateNotification("Echec connexion")
                     }
@@ -130,6 +178,11 @@ class RyderComForegroundService : Service() {
     }
 
     fun disconnectFromLiveKit() {
+        eventsJob?.cancel()
+        savedWsUrl = null
+        savedToken = null
+        savedSessionName = null
+        isZoneBlanche = false
         room?.disconnect()
         room = null
         updateState("DISCONNECTED")
