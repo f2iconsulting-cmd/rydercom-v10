@@ -145,7 +145,7 @@
                         log("Room LiveKit confirmée serveur : " + rid);
                     } else if (state.startsWith("SESSION_ID:")) {
                         const sid = state.replace("SESSION_ID:", "");
-                        document.getElementById("meta-sid").innerText = sid;
+                        document.getElementById("meta-room").innerText = sid;
                         log("Session ID serveur : " + sid);
                     } else if (state.startsWith("ERROR:")) {
                         setStatus("ERREUR ❌", "#ff0000");
@@ -186,7 +186,7 @@
 
             document.getElementById("meta-room").innerText = currentRoom;
             document.getElementById("meta-user").innerText = identity;
-            document.getElementById("meta-sid").innerText = "-";
+            
 
             log("Room générée : " + currentRoom);
             log("Identity : " + identity);
@@ -304,7 +304,7 @@
                         stopCloudPoll();
                         document.getElementById("meta-room").innerText = "-";
                         document.getElementById("meta-user").innerText = "-";
-                        document.getElementById("meta-sid").innerText = "-";
+                        
                         currentRoom = "";
                         currentToken = "";
                     })
