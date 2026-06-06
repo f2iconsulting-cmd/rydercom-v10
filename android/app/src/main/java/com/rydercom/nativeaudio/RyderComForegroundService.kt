@@ -7,6 +7,9 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
@@ -66,10 +69,12 @@ class RyderComForegroundService : Service() {
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
     private var persistentModule: PersistentAudioDeviceModule? = null
+    private var keepAliveAudioRecord: AudioRecord? = null
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        startKeepAliveAudio()
         Log.i(TAG, "Service cree")
     }
 
@@ -81,11 +86,43 @@ class RyderComForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onDestroy() {
+        stopKeepAliveAudio()
         serviceJob.cancel()
         room?.disconnect()
         room = null
         persistentModule = null
         super.onDestroy()
+    }
+
+    private fun startKeepAliveAudio() {
+        try {
+            val sampleRate = 44100
+            val channelConfig = AudioFormat.CHANNEL_IN_MONO
+            val audioFormat = AudioFormat.ENCODING_PCM_16BIT
+            val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+            keepAliveAudioRecord = AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                sampleRate,
+                channelConfig,
+                audioFormat,
+                bufferSize * 2
+            )
+            keepAliveAudioRecord?.startRecording()
+            Log.i(TAG, "KeepAlive AudioRecord ouvert")
+        } catch (e: Exception) {
+            Log.e(TAG, "Erreur KeepAlive AudioRecord: ${e.message}")
+        }
+    }
+
+    private fun stopKeepAliveAudio() {
+        try {
+            keepAliveAudioRecord?.stop()
+            keepAliveAudioRecord?.release()
+            keepAliveAudioRecord = null
+            Log.i(TAG, "KeepAlive AudioRecord ferme")
+        } catch (e: Exception) {
+            Log.e(TAG, "Erreur fermeture KeepAlive: ${e.message}")
+        }
     }
 
     fun setLiveKitStateListener(listener: LiveKitStateListener?) {
