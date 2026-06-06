@@ -13,10 +13,10 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import io.livekit.android.LiveKit
-import io.livekit.android.room.RoomOptions
-import io.livekit.android.room.track.AudioCaptureOptions
+import io.livekit.android.RoomOptions
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
+import io.livekit.android.room.track.LocalAudioTrackOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -71,16 +71,20 @@ class RyderComForegroundService : Service() {
     }
 
     fun connectToLiveKit(wsUrl: String, token: String, sessionName: String) {
-        Log.i(TAG, "connectToLiveKit wsUrl=$wsUrl")
+        Log.i(TAG, "connectToLiveKit wsUrl=$wsUrl room=$sessionName")
         updateState("CONNECTING")
 
-        val audioOptions = AudioCaptureOptions(stopLocalTrackOnMute = false)
-        val roomOptions = RoomOptions(audioCaptureOptions = audioOptions)
+        val localAudioOptions = LocalAudioTrackOptions(
+            noiseSuppression = true,
+            echoCancellation = true,
+            autoGainControl = true,
+            highPassFilter = true,
+            typingNoiseDetection = false
+        )
+        val roomOptions = RoomOptions(audioTrackCaptureDefaults = localAudioOptions)
         val newRoom = LiveKit.create(applicationContext, roomOptions)
         room = newRoom
 
-        // room.events retourne EventListenable<RoomEvent>
-        // EventListenable expose .events qui est un SharedFlow<RoomEvent>
         serviceScope.launch {
             newRoom.events.events.collect { event ->
                 when (event) {
@@ -96,10 +100,12 @@ class RyderComForegroundService : Service() {
                     is RoomEvent.Reconnecting -> {
                         updateState("RECONNECTING")
                         updateNotification("Reconnexion zone blanche...")
+                        enableMicrophone()
                     }
                     is RoomEvent.Reconnected -> {
                         updateState("CONNECTED")
                         updateNotification("Reconnecte - $sessionName")
+                        enableMicrophone()
                     }
                     is RoomEvent.FailedToConnect -> {
                         updateState("ERROR")
@@ -112,11 +118,13 @@ class RyderComForegroundService : Service() {
 
         serviceScope.launch {
             try {
+                Log.d(TAG, "Connexion vers $wsUrl...")
                 newRoom.connect(wsUrl, token)
+                Log.d(TAG, "Connexion WebSocket validee")
             } catch (e: Exception) {
-                Log.e(TAG, "Erreur connect: ${e.message}")
+                Log.e(TAG, "ECHEC CONNEXION: ${e.message}")
                 updateState("ERROR")
-                updateNotification("Erreur: ${e.message}")
+                updateNotification("Echec connexion serveur")
             }
         }
     }
