@@ -26,13 +26,14 @@
 
     <h1>🏍️ RyderCom — ENGINE 8_8_3</h1>
     <p>Labo : Moteur LiveKit Natif + Partage Extérieur</p>
-    <div class="version">v1.3.0-labo-build17</div>
+    <div class="version">v1.3.0-labo-build18</div>
 
     <div id="status">Statut : DÉCONNECTÉ</div>
 
     <div class="metadata-box">
         <div class="metadata-line"><span>Room ID active :</span><span id="meta-room" class="metadata-val">-</span></div>
         <div class="metadata-line"><span>User Identity :</span><span id="meta-user" class="metadata-val">-</span></div>
+        <div class="metadata-line"><span>Session ID serveur :</span><span id="meta-sid" class="metadata-val">-</span></div>
     </div>
 
     <button class="start" onclick="connecterIntercom()">1. REJOINDRE L'INTERCOM</button>
@@ -40,7 +41,7 @@
     <button class="stop"  onclick="deconnecterIntercom()">2. QUITTER L'INTERCOM</button>
     <button class="copy"  onclick="copierLogs()">📋 Copier les logs</button>
 
-    <div id="console">--- Console Prête v1.1.5 (Moteur LiveKit Natif) ---</div>
+    <div id="console">--- Console Prête v1.3.0 (Moteur LiveKit Natif) ---</div>
 
     <script>
         const { RyderComNativeAudio } = Capacitor.Plugins;
@@ -63,6 +64,12 @@
             console.log("[LABO] " + msg);
         }
 
+        function setStatus(text, color) {
+            const s = document.getElementById("status");
+            s.innerText = "Statut : " + text;
+            s.style.color = color;
+        }
+
         function copierLogs() {
             navigator.clipboard.writeText(logHistory.join("\n"))
                 .then(() => alert("Logs copiés !"))
@@ -72,23 +79,40 @@
         try {
             if (RyderComNativeAudio) {
                 RyderComNativeAudio.addListener("connectionStateChange", (info) => {
-                    const state = info.state ? info.state.toUpperCase() : "INCONNU";
-                    const statusDiv = document.getElementById("status");
-                    statusDiv.innerText = "Statut : " + state;
-                    if (state === "CONNECTED")   statusDiv.style.color = "#4CAF50";
-                    if (state === "CONNECTING" || state === "RECONNECTING") statusDiv.style.color = "#ff9800";
-                    if (state === "DISCONNECTED") statusDiv.style.color = "#f44336";
-                    if (state === "ERROR")        statusDiv.style.color = "#ff0000";
-                    if (state.startsWith("ROOM_ID:")) {
+                    const state = info.state || "INCONNU";
+
+                    if (state === "CONNECTED") {
+                        setStatus("CONNECTÉ ✅", "#4CAF50");
+                        log("CONNECTÉ au serveur LiveKit ✅");
+                    } else if (state === "CONNECTING") {
+                        setStatus("CONNEXION...", "#ff9800");
+                        log("Connexion en cours...");
+                    } else if (state === "RECONNECTING") {
+                        setStatus("RECONNEXION... 🔄", "#ff9800");
+                        log("⚠️ Reconnexion en cours (zone blanche ?)");
+                    } else if (state === "DISCONNECTED") {
+                        setStatus("DÉCONNECTÉ ❌", "#f44336");
+                        log("DÉCONNECTÉ du serveur LiveKit");
+                    } else if (state === "MICRO_ACTIVE") {
+                        log("🎤 Micro actif — voyant vert Android allumé");
+                    } else if (state === "MICRO_ERROR") {
+                        log("⚠️ Erreur activation microphone");
+                    } else if (state.startsWith("ROOM_ID:")) {
                         const rid = state.replace("ROOM_ID:", "");
                         document.getElementById("meta-room").innerText = rid;
-                        log("Room LiveKit confirmee : " + rid);
+                        log("Room LiveKit confirmée serveur : " + rid);
                     } else if (state.startsWith("SESSION_ID:")) {
-                        log("Session ID serveur : " + state.replace("SESSION_ID:", ""));
+                        const sid = state.replace("SESSION_ID:", "");
+                        document.getElementById("meta-sid").innerText = sid;
+                        log("Session ID serveur : " + sid);
                     } else if (state.startsWith("ERROR:")) {
+                        setStatus("ERREUR ❌", "#ff0000");
                         log("ERREUR SERVEUR : " + state.replace("ERROR:", ""));
+                    } else if (state === "ERROR") {
+                        setStatus("ERREUR ❌", "#ff0000");
+                        log("ERREUR connexion serveur");
                     } else {
-                        log("MOTEUR NATIF → " + state + (info.error ? " | " + info.error : ""));
+                        log("MOTEUR NATIF → " + state);
                     }
                 });
                 log("Plugin RyderComNativeAudio branché ✅");
@@ -101,9 +125,7 @@
 
         async function connecterIntercom() {
             log("--- CONNEXION DÉMARRÉE ---");
-            const statusDiv = document.getElementById("status");
-            statusDiv.style.color = "#ff9800";
-            statusDiv.innerText = "Génération de la room...";
+            setStatus("Génération room...", "#ff9800");
 
             if (!RyderComNativeAudio) {
                 log("ERREUR : Plugin natif manquant");
@@ -115,12 +137,13 @@
 
             document.getElementById("meta-room").innerText = currentRoom;
             document.getElementById("meta-user").innerText = identity;
+            document.getElementById("meta-sid").innerText = "-";
 
             log("Room générée : " + currentRoom);
-            log("Identity générée : " + identity);
+            log("Identity : " + identity);
 
             try {
-                statusDiv.innerText = "Négociation token...";
+                setStatus("Négociation token...", "#ff9800");
                 log("Appel Puter → " + PUTER_TOKEN);
 
                 const response = await fetch(PUTER_TOKEN, {
@@ -143,7 +166,7 @@
                 currentToken = data.token;
                 log("Token reçu ✅ (" + currentToken.length + " chars)");
 
-                statusDiv.innerText = "Lancement moteur natif...";
+                setStatus("Lancement moteur natif...", "#ff9800");
                 log("joinNativeRoom → " + WS_URL);
 
                 await RyderComNativeAudio.joinNativeRoom({
@@ -155,8 +178,7 @@
                 log("joinNativeRoom transmis ✅");
 
             } catch (err) {
-                statusDiv.style.color = "#ff0000";
-                statusDiv.innerText = "Erreur : " + err.message;
+                setStatus("ERREUR ❌", "#ff0000");
                 log("ERREUR : " + err.message);
             }
         }
@@ -190,6 +212,7 @@
                         log("Fermeture session natif ✅");
                         document.getElementById("meta-room").innerText = "-";
                         document.getElementById("meta-user").innerText = "-";
+                        document.getElementById("meta-sid").innerText = "-";
                         currentRoom = "";
                         currentToken = "";
                     })
