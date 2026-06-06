@@ -26,7 +26,7 @@
 
     <h1>🏍️ RyderCom — ENGINE 8_8_3</h1>
     <p>Labo : Moteur LiveKit Natif + Partage Extérieur</p>
-    <div class="version">v1.2.0-labo-build16</div>
+    <div class="version">v1.3.0-labo-build17</div>
 
     <div id="status">Statut : DÉCONNECTÉ</div>
 
@@ -79,7 +79,17 @@
                     if (state === "CONNECTING" || state === "RECONNECTING") statusDiv.style.color = "#ff9800";
                     if (state === "DISCONNECTED") statusDiv.style.color = "#f44336";
                     if (state === "ERROR")        statusDiv.style.color = "#ff0000";
-                    log("MOTEUR NATIF → " + state + (info.error ? " | " + info.error : ""));
+                    if (state.startsWith("ROOM_ID:")) {
+                        const rid = state.replace("ROOM_ID:", "");
+                        document.getElementById("meta-room").innerText = rid;
+                        log("Room LiveKit confirmee : " + rid);
+                    } else if (state.startsWith("SESSION_ID:")) {
+                        log("Session ID serveur : " + state.replace("SESSION_ID:", ""));
+                    } else if (state.startsWith("ERROR:")) {
+                        log("ERREUR SERVEUR : " + state.replace("ERROR:", ""));
+                    } else {
+                        log("MOTEUR NATIF → " + state + (info.error ? " | " + info.error : ""));
+                    }
                 });
                 log("Plugin RyderComNativeAudio branché ✅");
             } else {
