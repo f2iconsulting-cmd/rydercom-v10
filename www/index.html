@@ -18,6 +18,7 @@
         .stop  { background: #c62828; color: white; }
         .copy  { background: #37474f; color: #fff; padding: 10px; font-size: 14px; }
         #status { font-size: 18px; font-weight: bold; color: #2196F3; margin: 15px; padding: 10px; border: 1px solid #333; background: #222; border-radius: 8px; }
+        input { width: 100%; padding: 12px; background: #000; border: 1px solid #444; color: #fff; border-radius: 6px; font-family: monospace; font-size: 11px; box-sizing: border-box; margin-top: 6px; }
         #console { text-align: left; background: #000; border: 1px solid #333; padding: 10px; border-radius: 6px; height: 200px; overflow-y: auto; font-size: 12px; color: #00ff00; margin-top: 15px; }
     </style>
     <script src="capacitor.js"></script>
@@ -26,7 +27,7 @@
 
     <h1>🏍️ RyderCom — ENGINE 8_8_3</h1>
     <p>Labo : Moteur LiveKit Natif + Partage Extérieur</p>
-    <div class="version">v1.4.0-labo-build19</div>
+    <div class="version">v1.5.0-labo-build20</div>
 
     <div id="status">Statut : DÉCONNECTÉ</div>
 
@@ -34,6 +35,12 @@
         <div class="metadata-line"><span>Room ID active :</span><span id="meta-room" class="metadata-val">-</span></div>
         <div class="metadata-line"><span>User Identity :</span><span id="meta-user" class="metadata-val">-</span></div>
         <div class="metadata-line"><span>Session ID serveur :</span><span id="meta-sid" class="metadata-val">-</span></div>
+    </div>
+
+    <div class="metadata-box" style="border-color: #0288d1;">
+        <p style="margin-bottom: 6px; color: #0288d1; font-weight: bold;">🔗 Rejoindre une session PC :</p>
+        <input type="text" id="input-lien-pc" placeholder="Colle l URL du PC ici...">
+        <button onclick="connecterDepuisLienPC()" style="background: #0288d1; color: white; padding: 12px; margin-top: 8px; font-size: 14px; border-radius: 8px; border: none; width: 100%; font-weight: bold; cursor: pointer;">REJOINDRE SESSION PC</button>
     </div>
 
     <button class="start" onclick="connecterIntercom()">1. REJOINDRE L'INTERCOM</button>
@@ -208,6 +215,46 @@
                 navigator.clipboard.writeText(url);
                 alert("Lien copié :\n" + url);
                 log("Lien copié localement.");
+            }
+        }
+
+        async function connecterDepuisLienPC() {
+            const rawUrl = document.getElementById("input-lien-pc").value.trim();
+            if (!rawUrl) { alert("Colle d abord l URL du PC."); return; }
+            log("--- CONNEXION DEPUIS LIEN PC ---");
+            setStatus("Analyse URL...", "#ff9800");
+            try {
+                const urlMatch = rawUrl.match(/https?:\/\/[^\s]+/);
+                if (!urlMatch) throw new Error("URL HTTP invalide");
+                const cleanUrl = urlMatch[0];
+                log("URL extraite : " + cleanUrl);
+                const urlObj = new URL(cleanUrl);
+                const sid = urlObj.searchParams.get("sid");
+                if (!sid) throw new Error("Parametre sid manquant dans l URL");
+                currentRoom = sid;
+                const identity = "Moto-Franck-Labo-" + Math.floor(Math.random() * 1000);
+                document.getElementById("meta-room").innerText = currentRoom;
+                document.getElementById("meta-user").innerText = identity;
+                log("Room cible : " + currentRoom);
+                log("Identity : " + identity);
+                setStatus("Negociation token...", "#ff9800");
+                log("Appel Puter -> " + PUTER_TOKEN);
+                const response = await fetch(PUTER_TOKEN, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ roomName: currentRoom, participantIdentity: identity })
+                });
+                if (!response.ok) { const txt = await response.text(); throw new Error("Puter HTTP " + response.status + " : " + txt); }
+                const data = await response.json();
+                if (!data.token) throw new Error("Token absent");
+                currentToken = data.token;
+                log("Token recu ✅ (" + currentToken.length + " chars)");
+                setStatus("Lancement moteur natif...", "#ff9800");
+                await RyderComNativeAudio.joinNativeRoom({ wsUrl: WS_URL, token: currentToken, sessionName: currentRoom });
+                log("joinNativeRoom transmis ✅");
+            } catch(err) {
+                setStatus("ERREUR ❌", "#ff0000");
+                log("ERREUR : " + err.message);
             }
         }
 
