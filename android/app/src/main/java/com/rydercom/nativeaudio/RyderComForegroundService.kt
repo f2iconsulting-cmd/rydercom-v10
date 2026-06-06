@@ -13,14 +13,12 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import io.livekit.android.LiveKit
-import io.livekit.android.LiveKitOverrides
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 class RyderComForegroundService : Service() {
@@ -74,11 +72,14 @@ class RyderComForegroundService : Service() {
         Log.i(TAG, "connectToLiveKit wsUrl=$wsUrl")
         updateState("CONNECTING")
 
-        val newRoom = LiveKit.create(applicationContext, LiveKitOverrides(), serviceScope)
+        val newRoom = LiveKit.create(
+            context = applicationContext,
+            coroutineScope = serviceScope
+        )
         room = newRoom
 
         serviceScope.launch {
-            newRoom.events.collectLatest { event ->
+            newRoom.events.collect { event ->
                 when (event) {
                     is RoomEvent.Connected -> {
                         updateState("CONNECTED")
