@@ -7,26 +7,41 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import io.livekit.android.LiveKit
+import io.livekit.android.LiveKitOverrides
+import io.livekit.android.AudioOptions
 import io.livekit.android.RoomOptions
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
 import io.livekit.android.room.track.LocalAudioTrackOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import livekit.org.webrtc.audio.AudioDeviceModule
+import livekit.org.webrtc.audio.JavaAudioDeviceModule
+
+class PersistentAudioDeviceModule(private val delegate: AudioDeviceModule) : AudioDeviceModule {
+    override fun getNative(webrtcEnvRef: Long): Long {
+        return delegate.getNative(webrtcEnvRef)
+    }
+    override fun release() {
+        delegate.release()
+    }
+    override fun setSpeakerMute(muted: Boolean) {
+        delegate.setSpeakerMute(muted)
+    }
+    override fun setMicrophoneMute(muted: Boolean) {
+        Log.w("RyderCom", "[ADM] setMicrophoneMute($muted) intercepte — micro force OUVERT")
+        delegate.setMicrophoneMute(false)
+    }
+}
 
 class RyderComForegroundService : Service() {
 
@@ -50,57 +65,11 @@ class RyderComForegroundService : Service() {
     private var room: Room? = null
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
-    private var eventsJob: Job? = null
-
-    private var savedWsUrl: String? = null
-    private var savedToken: String? = null
-    private var savedSessionName: String? = null
-    private var isZoneBlanche = false
-
-    private lateinit var connectivityManager: ConnectivityManager
-
-    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
-        override fun onLost(network: Network) {
-            super.onLost(network)
-            if (!isZoneBlanche) {
-                isZoneBlanche = true
-                Log.w(TAG, "[RESEAU] Perte signal — Zone Blanche")
-                updateState("RECONNECTING")
-                updateNotification("Zone blanche - Recherche signal...")
-            }
-        }
-
-        override fun onAvailable(network: Network) {
-            super.onAvailable(network)
-            if (isZoneBlanche && savedWsUrl != null && savedToken != null) {
-                isZoneBlanche = false
-                Log.i(TAG, "[RESEAU] Signal retabli — Reconnexion LiveKit")
-                serviceScope.launch {
-                    try {
-                        updateNotification("Reconnexion au groupe...")
-                        room?.connect(savedWsUrl!!, savedToken!!)
-                        Log.i(TAG, "[LiveKit] Reconnexion reussie")
-                        room?.localParticipant?.setMicrophoneEnabled(true)
-                        updateState("CONNECTED")
-                        updateNotification("Connecte - ${savedSessionName ?: ""}")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "[ERREUR] Echec reconnexion: ${e.message}")
-                        isZoneBlanche = true
-                        updateState("RECONNECTING")
-                    }
-                }
-            }
-        }
-    }
+    private var persistentModule: PersistentAudioDeviceModule? = null
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val networkRequest = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .build()
-        connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
         Log.i(TAG, "Service cree")
     }
 
@@ -112,10 +81,10 @@ class RyderComForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onDestroy() {
-        try { connectivityManager.unregisterNetworkCallback(networkCallback) } catch (e: Exception) {}
         serviceJob.cancel()
         room?.disconnect()
         room = null
+        persistentModule = null
         super.onDestroy()
     }
 
@@ -125,11 +94,14 @@ class RyderComForegroundService : Service() {
 
     fun connectToLiveKit(wsUrl: String, token: String, sessionName: String) {
         Log.i(TAG, "connectToLiveKit wsUrl=$wsUrl room=$sessionName")
-        savedWsUrl = wsUrl
-        savedToken = token
-        savedSessionName = sessionName
-        isZoneBlanche = false
         updateState("CONNECTING")
+
+        val baseAudioModule = JavaAudioDeviceModule.builder(applicationContext)
+            .setUseHardwareAcousticEchoCanceler(true)
+            .setUseHardwareNoiseSuppressor(true)
+            .createAudioDeviceModule()
+
+        persistentModule = PersistentAudioDeviceModule(baseAudioModule)
 
         val localAudioOptions = LocalAudioTrackOptions(
             noiseSuppression = true,
@@ -139,23 +111,34 @@ class RyderComForegroundService : Service() {
             typingNoiseDetection = false
         )
         val roomOptions = RoomOptions(audioTrackCaptureDefaults = localAudioOptions)
-        val newRoom = LiveKit.create(applicationContext, roomOptions)
+        val overrides = LiveKitOverrides(
+            audioOptions = AudioOptions(audioDeviceModule = persistentModule)
+        )
+        val newRoom = LiveKit.create(applicationContext, roomOptions, overrides)
         room = newRoom
 
-        // Ecoute des events jusqu a CONNECTED puis SDK rendu aveugle
-        eventsJob = serviceScope.launch {
+        serviceScope.launch {
             newRoom.events.events.collect { event ->
                 when (event) {
                     is RoomEvent.Connected -> {
-                        Log.i(TAG, "RoomEvent.Connected — SDK rendu aveugle")
                         updateState("CONNECTED")
                         updateNotification("Connecte - $sessionName")
                         enableMicrophone()
-                        // SDK aveugle : on annule l ecoute des events
-                        eventsJob?.cancel()
+                    }
+                    is RoomEvent.Disconnected -> {
+                        updateState("DISCONNECTED")
+                        updateNotification("Deconnecte")
+                    }
+                    is RoomEvent.Reconnecting -> {
+                        updateState("RECONNECTING")
+                        updateNotification("Reconnexion zone blanche...")
+                    }
+                    is RoomEvent.Reconnected -> {
+                        updateState("CONNECTED")
+                        updateNotification("Reconnecte - $sessionName")
+                        enableMicrophone()
                     }
                     is RoomEvent.FailedToConnect -> {
-                        Log.e(TAG, "RoomEvent.FailedToConnect")
                         updateState("ERROR")
                         updateNotification("Echec connexion")
                     }
@@ -166,9 +149,7 @@ class RyderComForegroundService : Service() {
 
         serviceScope.launch {
             try {
-                Log.d(TAG, "Connexion vers $wsUrl...")
                 newRoom.connect(wsUrl, token)
-                Log.d(TAG, "Connexion WebSocket validee")
             } catch (e: Exception) {
                 Log.e(TAG, "ECHEC CONNEXION: ${e.message}")
                 updateState("ERROR")
@@ -178,13 +159,9 @@ class RyderComForegroundService : Service() {
     }
 
     fun disconnectFromLiveKit() {
-        eventsJob?.cancel()
-        savedWsUrl = null
-        savedToken = null
-        savedSessionName = null
-        isZoneBlanche = false
         room?.disconnect()
         room = null
+        persistentModule = null
         updateState("DISCONNECTED")
         updateNotification("Intercom inactif")
         stopForeground(true)
