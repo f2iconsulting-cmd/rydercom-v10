@@ -5,6 +5,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.Build;
@@ -17,9 +18,7 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 import io.livekit.android.LiveKit;
-import io.livekit.android.LiveKitOverrides;
 import io.livekit.android.room.Room;
-import io.livekit.android.room.RoomListener;
 
 import kotlin.Unit;
 import kotlin.coroutines.Continuation;
@@ -45,7 +44,7 @@ public class RyderComForegroundService extends Service {
 
     private Room liveKitRoom;
     private final CoroutineScope roomScope = CoroutineScopeKt.CoroutineScope(
-        Dispatchers.getMain().plus(SupervisorKt.Supervisor(null))
+        Dispatchers.getMain().plus(SupervisorKt.SupervisorJob(null))
     );
 
     public interface LiveKitStateListener {
@@ -85,9 +84,9 @@ public class RyderComForegroundService extends Service {
         updateServiceStatus("CONNECTING");
         notifyStateChange("CONNECTING");
 
-        liveKitRoom = LiveKit.create(getApplicationContext(), new LiveKitOverrides(), roomScope);
+        liveKitRoom = LiveKit.create(getApplicationContext());
 
-        liveKitRoom.setListener(new RoomListener() {
+        liveKitRoom.addListener(new Room.Listener() {
             @Override
             public void onConnected(@NonNull Room room) {
                 Log.i(TAG, "✅ onConnected");
@@ -100,11 +99,11 @@ public class RyderComForegroundService extends Service {
             }
 
             @Override
-            public void onDisconnect(@NonNull Room room, @NonNull Throwable error) {
-                Log.w(TAG, "onDisconnect : " + error.getMessage());
+            public void onDisconnected(@NonNull Room room, @Nullable Exception error) {
+                Log.w(TAG, "onDisconnected");
                 handler.post(() -> {
                     updateServiceStatus("DISCONNECTED");
-                    updateNotification("DÉCONNECTÉ — Erreur de session");
+                    updateNotification("DÉCONNECTÉ");
                     notifyStateChange("DISCONNECTED");
                 });
             }
@@ -138,7 +137,7 @@ public class RyderComForegroundService extends Service {
                 @Override
                 public Object invoke(CoroutineScope scope, Continuation<? super Unit> continuation) {
                     try {
-                        Object result = liveKitRoom.connect(wsUrl, token, null, continuation);
+                        Object result = liveKitRoom.connect(wsUrl, token, continuation);
                         if (result == IntrinsicsKt.getCOROUTINE_SUSPENDED()) return result;
                         return Unit.INSTANCE;
                     } catch (Exception e) {
@@ -159,7 +158,7 @@ public class RyderComForegroundService extends Service {
         if (liveKitRoom == null) return;
         try {
             liveKitRoom.getLocalParticipant().setMicrophoneEnabled(
-                true, null,
+                true,
                 new Continuation<Unit>() {
                     @NonNull
                     @Override
@@ -170,22 +169,22 @@ public class RyderComForegroundService extends Service {
                     public void resumeWith(@NonNull Object o) {
                         if (o instanceof kotlin.Result.Failure) {
                             Log.e(TAG, "Erreur micro");
-                            notifyStateChange("MICRO_ERROR");
+                            handler.post(() -> notifyStateChange("MICRO_ERROR"));
                         } else {
                             Log.i(TAG, "🎤 Micro actif !");
-                            notifyStateChange("MICRO_ACTIVE");
+                            handler.post(() -> notifyStateChange("MICRO_ACTIVE"));
                         }
                     }
                 }
             );
         } catch (Exception e) {
-            Log.e(TAG, "enableLocalAudio exception : " + e.getMessage());
+            Log.e(TAG, "enableLocalAudio : " + e.getMessage());
         }
     }
 
     public void disconnectFromLiveKit() {
         if (liveKitRoom != null) {
-            try { liveKitRoom.disconnect(); } catch (Exception e) { Log.e(TAG, "disconnect err", e); }
+            try { liveKitRoom.disconnect(); } catch (Exception e) { Log.e(TAG, "disconnect", e); }
             liveKitRoom = null;
         }
         updateServiceStatus("DISCONNECTED");
