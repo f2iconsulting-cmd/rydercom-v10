@@ -22,7 +22,8 @@ import com.getcapacitor.annotation.PermissionCallback;
     name = "RyderComNativeAudio",
     permissions = {
         @Permission(alias = "microphone", strings = { Manifest.permission.RECORD_AUDIO }),
-        @Permission(alias = "bluetooth", strings = { Manifest.permission.BLUETOOTH_CONNECT })
+        @Permission(alias = "bluetooth", strings = { Manifest.permission.BLUETOOTH_CONNECT }),
+        @Permission(alias = "notifications", strings = { "android.permission.POST_NOTIFICATIONS" })
     }
 )
 public class RyderComNativeAudioPlugin extends Plugin
@@ -149,6 +150,33 @@ public class RyderComNativeAudioPlugin extends Plugin
             boundService.connectToLiveKit(wsUrl, token, sessionName);
             call.resolve();
         }
+    }
+
+    @PluginMethod
+    public void checkAndRequestPermissions(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            boolean micOk = ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+            boolean notifOk = ContextCompat.checkSelfPermission(getContext(), "android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED;
+            if (!micOk || !notifOk) {
+                requestAllPermissions(call, "permissionsCallback");
+                return;
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissionForAlias("microphone", call, "permissionsCallback");
+                return;
+            }
+        }
+        JSObject ret = new JSObject();
+        ret.put("status", "all_granted");
+        call.resolve(ret);
+    }
+
+    @PermissionCallback
+    private void permissionsCallback(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("status", "all_granted");
+        call.resolve(ret);
     }
 
     @PluginMethod
