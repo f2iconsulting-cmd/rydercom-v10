@@ -13,6 +13,8 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import io.livekit.android.LiveKit
+import io.livekit.android.room.RoomOptions
+import io.livekit.android.room.track.AudioCaptureOptions
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
 import kotlinx.coroutines.CoroutineScope
@@ -72,7 +74,9 @@ class RyderComForegroundService : Service() {
         Log.i(TAG, "connectToLiveKit wsUrl=$wsUrl")
         updateState("CONNECTING")
 
-        val newRoom = LiveKit.create(applicationContext)
+        val audioOptions = AudioCaptureOptions(stopLocalTrackOnMute = false)
+        val roomOptions = RoomOptions(audioCaptureOptions = audioOptions)
+        val newRoom = LiveKit.create(applicationContext, roomOptions)
         room = newRoom
 
         // room.events retourne EventListenable<RoomEvent>
