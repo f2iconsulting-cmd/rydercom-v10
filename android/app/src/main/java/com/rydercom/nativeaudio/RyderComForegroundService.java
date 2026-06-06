@@ -5,7 +5,6 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.Build;
@@ -13,49 +12,52 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+
+import io.livekit.android.LiveKit;
+import io.livekit.android.LiveKitOverrides;
+import io.livekit.android.room.Room;
+import io.livekit.android.room.RoomListener;
+
+import kotlin.Unit;
+import kotlin.coroutines.Continuation;
+import kotlin.coroutines.CoroutineContext;
+import kotlin.jvm.functions.Function2;
+import kotlin.coroutines.intrinsics.IntrinsicsKt;
+import kotlinx.coroutines.BuildersKt;
+import kotlinx.coroutines.CoroutineScope;
+import kotlinx.coroutines.CoroutineScopeKt;
+import kotlinx.coroutines.CoroutineStart;
+import kotlinx.coroutines.Dispatchers;
+import kotlinx.coroutines.SupervisorKt;
 
 public class RyderComForegroundService extends Service {
 
     private static final String TAG = "RyderComFgService";
-    private static final int NOTIFICATION_ID = 1001;
-    private static final String CHANNEL_ID = "rydercom_intercom_channel";
-    private static final String CHANNEL_NAME = "RyderCom Intercom";
-    private static final int RECONNECT_DELAY_MS = 3000;
-    private static final int MAX_RECONNECT_ATTEMPTS = 10;
-
-    public static final String ACTION_JOIN = "com.rydercom.action.JOIN";
-    public static final String ACTION_LEAVE = "com.rydercom.action.LEAVE";
-    public static final String EXTRA_WS_URL = "wsUrl";
-    public static final String EXTRA_TOKEN = "token";
-
-    public static final String STATE_CONNECTING = "CONNECTING";
-    public static final String STATE_CONNECTED = "CONNECTED";
-    public static final String STATE_RECONNECTING = "RECONNECTING";
-    public static final String STATE_DISCONNECTED = "DISCONNECTED";
-    public static final String STATE_ERROR = "ERROR";
+    private static final String CHANNEL_ID = "RyderComServiceChannel";
+    private static final int NOTIFICATION_ID = 888;
 
     private final IBinder binder = new LocalBinder();
+    private String currentStatus = "DISCONNECTED";
+    private final Handler handler = new Handler(Looper.getMainLooper());
+
+    private Room liveKitRoom;
+    private final CoroutineScope roomScope = CoroutineScopeKt.CoroutineScope(
+        Dispatchers.getMain().plus(SupervisorKt.Supervisor(null))
+    );
+
+    public interface LiveKitStateListener {
+        void onStateChanged(String state);
+    }
+
+    private LiveKitStateListener stateListener;
 
     public class LocalBinder extends Binder {
-        public RyderComForegroundService getService() { return RyderComForegroundService.this; }
-    }
-
-    private String wsUrl;
-    private String token;
-    private String currentState = STATE_DISCONNECTED;
-    private boolean isJoining = false;
-    private int reconnectAttempts = 0;
-    private final Handler handler = new Handler(Looper.getMainLooper());
-    private StateChangeListener stateChangeListener;
-
-    public interface StateChangeListener {
-        void onStateChanged(String state, @Nullable String errorMessage);
-    }
-
-    public void setStateChangeListener(StateChangeListener listener) {
-        this.stateChangeListener = listener;
+        public RyderComForegroundService getService() {
+            return RyderComForegroundService.this;
+        }
     }
 
     @Override
@@ -66,106 +68,176 @@ public class RyderComForegroundService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent == null) {
-            if (wsUrl != null && token != null) scheduleReconnect();
-            return START_STICKY;
-        }
-        String action = intent.getAction();
-        if (ACTION_JOIN.equals(action)) {
-            wsUrl = intent.getStringExtra(EXTRA_WS_URL);
-            token = intent.getStringExtra(EXTRA_TOKEN);
-            if (wsUrl == null || token == null) {
-                notifyState(STATE_ERROR, "wsUrl ou token manquant");
-                stopSelf();
-                return START_NOT_STICKY;
-            }
-            startForeground(NOTIFICATION_ID, buildNotification(STATE_CONNECTING));
-            simulateConnection();
-        } else if (ACTION_LEAVE.equals(action)) {
-            disconnectFromRoom(true);
-        }
+        startForeground(NOTIFICATION_ID, createNotification("DÉCONNECTÉ — Console Labo"));
         return START_STICKY;
     }
 
+    @Nullable
     @Override
     public IBinder onBind(Intent intent) { return binder; }
 
-    @Override
-    public void onDestroy() {
-        handler.removeCallbacksAndMessages(null);
-        super.onDestroy();
+    public void setLiveKitStateListener(LiveKitStateListener listener) {
+        this.stateListener = listener;
     }
 
-    private void simulateConnection() {
-        if (isJoining) return;
-        isJoining = true;
-        notifyState(STATE_CONNECTING, null);
-        updateNotification(STATE_CONNECTING);
-        handler.postDelayed(() -> {
-            isJoining = false;
-            reconnectAttempts = 0;
-            notifyState(STATE_CONNECTED, null);
-            updateNotification(STATE_CONNECTED);
-            Log.i(TAG, "LiveKit ready — wsUrl=" + wsUrl);
-        }, 1500);
+    public void connectToLiveKit(final String wsUrl, final String token, final String sessionName) {
+        Log.i(TAG, "connectToLiveKit → " + wsUrl);
+        updateServiceStatus("CONNECTING");
+        notifyStateChange("CONNECTING");
+
+        liveKitRoom = LiveKit.create(getApplicationContext(), new LiveKitOverrides(), roomScope);
+
+        liveKitRoom.setListener(new RoomListener() {
+            @Override
+            public void onConnected(@NonNull Room room) {
+                Log.i(TAG, "✅ onConnected");
+                handler.post(() -> {
+                    updateServiceStatus("CONNECTED");
+                    updateNotification("CONNECTÉ — " + sessionName);
+                    notifyStateChange("CONNECTED");
+                    enableLocalAudio();
+                });
+            }
+
+            @Override
+            public void onDisconnect(@NonNull Room room, @NonNull Throwable error) {
+                Log.w(TAG, "onDisconnect : " + error.getMessage());
+                handler.post(() -> {
+                    updateServiceStatus("DISCONNECTED");
+                    updateNotification("DÉCONNECTÉ — Erreur de session");
+                    notifyStateChange("DISCONNECTED");
+                });
+            }
+
+            @Override
+            public void onReconnecting(@NonNull Room room) {
+                Log.i(TAG, "onReconnecting");
+                handler.post(() -> {
+                    updateServiceStatus("RECONNECTING");
+                    updateNotification("RECONNEXION (Zone Blanche)...");
+                    notifyStateChange("RECONNECTING");
+                });
+            }
+
+            @Override
+            public void onReconnected(@NonNull Room room) {
+                Log.i(TAG, "onReconnected ✅");
+                handler.post(() -> {
+                    updateServiceStatus("CONNECTED");
+                    updateNotification("CONNECTÉ — " + sessionName);
+                    notifyStateChange("CONNECTED");
+                });
+            }
+        });
+
+        BuildersKt.launch(
+            roomScope,
+            Dispatchers.getIO(),
+            CoroutineStart.DEFAULT,
+            new Function2<CoroutineScope, Continuation<? super Unit>, Object>() {
+                @Override
+                public Object invoke(CoroutineScope scope, Continuation<? super Unit> continuation) {
+                    try {
+                        Object result = liveKitRoom.connect(wsUrl, token, null, continuation);
+                        if (result == IntrinsicsKt.getCOROUTINE_SUSPENDED()) return result;
+                        return Unit.INSTANCE;
+                    } catch (Exception e) {
+                        Log.e(TAG, "Erreur connect : " + e.getMessage());
+                        handler.post(() -> {
+                            updateServiceStatus("DISCONNECTED");
+                            updateNotification("ÉCHEC CONNEXION");
+                            notifyStateChange("ERROR");
+                        });
+                        return Unit.INSTANCE;
+                    }
+                }
+            }
+        );
     }
 
-    public void disconnectFromRoom(boolean stopService) {
-        handler.removeCallbacksAndMessages(null);
-        reconnectAttempts = 0;
-        isJoining = false;
-        notifyState(STATE_DISCONNECTED, null);
-        if (stopService) { stopForeground(true); stopSelf(); }
-    }
-
-    private void scheduleReconnect() {
-        if (wsUrl == null || token == null) return;
-        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-            notifyState(STATE_ERROR, "Reconnexion impossible après " + MAX_RECONNECT_ATTEMPTS + " tentatives");
-            stopForeground(true); stopSelf(); return;
+    private void enableLocalAudio() {
+        if (liveKitRoom == null) return;
+        try {
+            liveKitRoom.getLocalParticipant().setMicrophoneEnabled(
+                true, null,
+                new Continuation<Unit>() {
+                    @NonNull
+                    @Override
+                    public CoroutineContext getContext() {
+                        return roomScope.getCoroutineContext();
+                    }
+                    @Override
+                    public void resumeWith(@NonNull Object o) {
+                        if (o instanceof kotlin.Result.Failure) {
+                            Log.e(TAG, "Erreur micro");
+                            notifyStateChange("MICRO_ERROR");
+                        } else {
+                            Log.i(TAG, "🎤 Micro actif !");
+                            notifyStateChange("MICRO_ACTIVE");
+                        }
+                    }
+                }
+            );
+        } catch (Exception e) {
+            Log.e(TAG, "enableLocalAudio exception : " + e.getMessage());
         }
-        long delayMs = Math.min(RECONNECT_DELAY_MS * (long) Math.pow(2, reconnectAttempts), 30000L);
-        reconnectAttempts++;
-        handler.postDelayed(() -> { if (wsUrl != null && token != null) simulateConnection(); }, delayMs);
+    }
+
+    public void disconnectFromLiveKit() {
+        if (liveKitRoom != null) {
+            try { liveKitRoom.disconnect(); } catch (Exception e) { Log.e(TAG, "disconnect err", e); }
+            liveKitRoom = null;
+        }
+        updateServiceStatus("DISCONNECTED");
+        updateNotification("DÉCONNECTÉ — Quitté proprement");
+        notifyStateChange("DISCONNECTED");
+        stopForeground(true);
+        stopSelf();
+    }
+
+    public String getCurrentStatus() { return currentStatus; }
+
+    private void updateServiceStatus(String status) { this.currentStatus = status; }
+
+    private void notifyStateChange(String state) {
+        if (stateListener != null) handler.post(() -> stateListener.onStateChanged(state));
     }
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_LOW);
-            channel.setShowBadge(false);
+            NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID, "RyderCom Intercom", NotificationManager.IMPORTANCE_HIGH
+            );
             NotificationManager nm = getSystemService(NotificationManager.class);
             if (nm != null) nm.createNotificationChannel(channel);
         }
     }
 
-    private Notification buildNotification(String state) {
-        Intent notifIntent = new Intent(this, MainActivity.class);
-        PendingIntent pi = PendingIntent.getActivity(this, 0, notifIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        String text;
-        switch (state) {
-            case STATE_CONNECTED: text = "Intercom actif"; break;
-            case STATE_CONNECTING: text = "Connexion..."; break;
-            case STATE_RECONNECTING: text = "Reconnexion..."; break;
-            default: text = "Intercom inactif"; break;
-        }
+    private Notification createNotification(String text) {
+        Intent i = new Intent(this, MainActivity.class);
+        PendingIntent pi = PendingIntent.getActivity(this, 0, i,
+            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("RyderCom").setContentText(text)
+            .setContentTitle("RyderCom Intercom")
+            .setContentText(text)
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-            .setContentIntent(pi).setOngoing(true).setSilent(true).build();
+            .setContentIntent(pi)
+            .setOngoing(true)
+            .setSilent(true)
+            .build();
     }
 
-    private void updateNotification(String state) {
-        NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (nm != null) nm.notify(NOTIFICATION_ID, buildNotification(state));
+    private void updateNotification(String text) {
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (nm != null) nm.notify(NOTIFICATION_ID, createNotification(text));
     }
 
-    private void notifyState(String state, @Nullable String errorMessage) {
-        this.currentState = state;
-        if (stateChangeListener != null) {
-            handler.post(() -> stateChangeListener.onStateChanged(state, errorMessage));
+    @Override
+    public void onDestroy() {
+        if (liveKitRoom != null) {
+            try { liveKitRoom.disconnect(); } catch (Exception e) {}
+            liveKitRoom = null;
         }
+        super.onDestroy();
     }
-
-    public String getCurrentState() { return currentState; }
 }
