@@ -72,14 +72,13 @@ class RyderComForegroundService : Service() {
         Log.i(TAG, "connectToLiveKit wsUrl=$wsUrl")
         updateState("CONNECTING")
 
-        val newRoom = LiveKit.create(
-            context = applicationContext,
-            coroutineScope = serviceScope
-        )
+        val newRoom = LiveKit.create(applicationContext)
         room = newRoom
 
+        // room.events retourne EventListenable<RoomEvent>
+        // EventListenable expose .events qui est un SharedFlow<RoomEvent>
         serviceScope.launch {
-            newRoom.events.collect { event ->
+            newRoom.events.events.collect { event ->
                 when (event) {
                     is RoomEvent.Connected -> {
                         updateState("CONNECTED")
