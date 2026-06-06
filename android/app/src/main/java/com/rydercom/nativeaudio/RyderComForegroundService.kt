@@ -28,8 +28,8 @@ import livekit.org.webrtc.audio.AudioDeviceModule
 import livekit.org.webrtc.audio.JavaAudioDeviceModule
 
 class PersistentAudioDeviceModule(private val delegate: AudioDeviceModule) : AudioDeviceModule {
-    override fun getNative(webrtcEnvRef: Long): Long {
-        return delegate.getNative(webrtcEnvRef)
+    override fun getNativeAudioDeviceModulePointer(): Long {
+        return delegate.nativeAudioDeviceModulePointer
     }
     override fun release() {
         delegate.release()
