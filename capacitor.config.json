@@ -1,5 +1,12 @@
 {
   "appId": "com.rydercom.nativeaudio",
   "appName": "RyderCom",
-  "webDir": "www"
+  "webDir": "www",
+  "plugins": {
+    "FirebaseAuthentication": {
+      "skipNativeAuth": false,
+      "providers": ["google.com"],
+      "serverClientId": "1038989802853-hd5uske5por8974f5boojf8se7l8smln.apps.googleusercontent.com"
+    }
+  }
 }

@@ -1,7 +1,8 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">RyderCom</string>
     <string name="title_activity_main">RyderCom</string>
     <string name="package_name">com.rydercom.nativeaudio</string>
     <string name="custom_url_scheme">com.rydercom.nativeaudio</string>
+    <string name="server_client_id">1038989802853-hd5uske5por8974f5boojf8se7l8smln.apps.googleusercontent.com</string>
 </resources>
