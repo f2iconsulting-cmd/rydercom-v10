@@ -1,0 +1,121 @@
+{
+  "project_info": {
+    "project_number": "1038989802853",
+    "project_id": "rydercom",
+    "storage_bucket": "rydercom.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1038989802853:android:d5aac434618040d12cb58c",
+        "android_client_info": {
+          "package_name": "com.rydercom.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1038989802853-ebpdfahsfn7q6tb1vs2hb6b6j53flt1c.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rydercom.app",
+            "certificate_hash": "53afee2653f8a1349abeb41ab843b0135ca487f6"
+          }
+        },
+        {
+          "client_id": "1038989802853-hd5uske5por8974f5boojf8se7l8smln.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAxlpLVbPmYiFOOAtQIb_h-tX79IhX_9Wo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1038989802853-hd5uske5por8974f5boojf8se7l8smln.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1038989802853:android:272df1e6149f6a5f2cb58c",
+        "android_client_info": {
+          "package_name": "com.rydercom.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1038989802853-ct6vd3u7eb467bic5kq608om473afr79.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rydercom.debug",
+            "certificate_hash": "684636c047c58e823a7954885f6e4f495804564a"
+          }
+        },
+        {
+          "client_id": "1038989802853-hd5uske5por8974f5boojf8se7l8smln.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAxlpLVbPmYiFOOAtQIb_h-tX79IhX_9Wo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1038989802853-hd5uske5por8974f5boojf8se7l8smln.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1038989802853:android:4a740377ced8fc192cb58c",
+        "android_client_info": {
+          "package_name": "com.rydercom.nativeaudio"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1038989802853-e6jb9ut4oeki87rlsadoahbeqbud6fkr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rydercom.nativeaudio",
+            "certificate_hash": "3f44e24127e152a8c718915f41b4dcf7efaff28b"
+          }
+        },
+        {
+          "client_id": "1038989802853-hd5uske5por8974f5boojf8se7l8smln.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAxlpLVbPmYiFOOAtQIb_h-tX79IhX_9Wo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1038989802853-hd5uske5por8974f5boojf8se7l8smln.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
