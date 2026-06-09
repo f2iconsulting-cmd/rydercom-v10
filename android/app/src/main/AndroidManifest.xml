@@ -47,7 +47,7 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="microphone|mediaPlayback"
-            android:stopWithTask="false" />
+            android:stopWithTask="true" />
 
     </application>
 
