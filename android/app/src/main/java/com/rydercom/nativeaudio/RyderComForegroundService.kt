@@ -25,6 +25,7 @@ import io.livekit.android.room.track.LocalAudioTrackOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import livekit.org.webrtc.audio.AudioDeviceModule
@@ -72,8 +73,11 @@ class RyderComForegroundService : Service() {
     private var persistentModule: PersistentAudioDeviceModule? = null
     private var keepAliveAudioRecord: AudioRecord? = null
 
-    // Paramètres session — conservés pour reconnexion interne LiveKit SDK
+    // ── MÉTHODE HARD : Variables de mémorisation de session ──
     private var currentSessionName: String = "Ryde en cours"
+    private var cachedRoomName: String = ""
+    private var cachedIdentity: String = ""
+    private var isExplicitQuitByUser: Boolean = false
 
     override fun onCreate() {
         super.onCreate()
@@ -86,9 +90,19 @@ class RyderComForegroundService : Service() {
         val sessionName = intent?.getStringExtra(EXTRA_SESSION_NAME) ?: "Ryde en cours"
         val roomName    = intent?.getStringExtra(EXTRA_ROOM_NAME)    ?: ""
         val identity    = intent?.getStringExtra(EXTRA_IDENTITY)     ?: "Rider"
+        
         currentSessionName = sessionName
+        isExplicitQuitByUser = false // Reset à chaque démarrage propre de l'UI
+        
+        // Sauvegarde en mémoire pour les futures relances de la boucle
+        if (roomName.isNotEmpty() && identity.isNotEmpty()) {
+            cachedRoomName = roomName
+            cachedIdentity = identity
+        }
+
         Log.i(TAG, "[LIFECYCLE] onStartCommand sessionName=$sessionName roomName=$roomName identity=$identity")
         startForeground(NOTIFICATION_ID, buildNotification(sessionName))
+        
         if (roomName.isNotEmpty() && identity.isNotEmpty()) {
             serviceScope.launch {
                 Log.i(TAG, "[TOKEN] Lancement fetchTokenAndConnect room=$roomName identity=$identity")
@@ -102,6 +116,7 @@ class RyderComForegroundService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         Log.i(TAG, "[LIFECYCLE] onTaskRemoved — arret propre")
+        isExplicitQuitByUser = true
         stopKeepAliveAudio()
         serviceJob.cancel()
         room?.disconnect()
@@ -113,6 +128,7 @@ class RyderComForegroundService : Service() {
 
     override fun onDestroy() {
         Log.i(TAG, "[LIFECYCLE] onDestroy")
+        isExplicitQuitByUser = true
         stopKeepAliveAudio()
         serviceJob.cancel()
         room?.disconnect()
@@ -153,6 +169,7 @@ class RyderComForegroundService : Service() {
     }
 
     private suspend fun fetchTokenAndConnect(roomName: String, identity: String, sessionName: String) {
+        if (isExplicitQuitByUser) return
         try {
             Log.i(TAG, "[TOKEN] Fetch debut — room=$roomName identity=$identity url=$TOKEN_URL")
             updateState("TOKEN_FETCHING")
@@ -174,10 +191,14 @@ class RyderComForegroundService : Service() {
             Log.e(TAG, "[TOKEN] Erreur fetch token: ${e.message}")
             updateState("TOKEN_ERROR")
             updateNotification("Erreur token")
+            
+            // ── MÉTHODE HARD : Échec du Fetch Token (ex: Serveur Puter offline) -> Retry dans 5s ──
+            scheduleHardRetry()
         }
     }
 
     fun connectToLiveKit(wsUrl: String, token: String, sessionName: String) {
+        if (isExplicitQuitByUser) return
         Log.i(TAG, "[LIVEKIT] connectToLiveKit wsUrl=$wsUrl sessionName=$sessionName")
         updateState("CONNECTING")
         updateNotification("Connexion...")
@@ -216,6 +237,9 @@ class RyderComForegroundService : Service() {
                         Log.w(TAG, "[LIVEKIT] RoomEvent.Disconnected")
                         updateState("DISCONNECTED")
                         updateNotification("Deconnecte")
+                        
+                        // ── MÉTHODE HARD : Déconnexion subie (LiveKit a abandonné) -> On relance la machine ──
+                        scheduleHardRetry()
                     }
                     is RoomEvent.Reconnecting -> {
                         Log.w(TAG, "[LIVEKIT] RoomEvent.Reconnecting")
@@ -232,6 +256,9 @@ class RyderComForegroundService : Service() {
                         Log.e(TAG, "[LIVEKIT] RoomEvent.FailedToConnect")
                         updateState("ERROR")
                         updateNotification("Echec connexion")
+                        
+                        // ── MÉTHODE HARD : Échec d'entrée initial dans le salon -> Retry ──
+                        scheduleHardRetry()
                     }
                     else -> {}
                 }
@@ -247,12 +274,41 @@ class RyderComForegroundService : Service() {
                 Log.e(TAG, "[LIVEKIT] ECHEC connect: ${e.message}")
                 updateState("ERROR")
                 updateNotification("Echec connexion serveur")
+                
+                // ── MÉTHODE HARD : Le connect à crashé -> On planifie la relance ──
+                scheduleHardRetry()
+            }
+        }
+    }
+
+    // ── MÉTHODE HARD : Fonction de planification de Retry automatique ──
+    private fun scheduleHardRetry() {
+        if (isExplicitQuitByUser) {
+            Log.i(TAG, "[HARD-RETRY] Annulé : Déconnexion volontaire de l'utilisateur.")
+            return
+        }
+        
+        serviceScope.launch {
+            Log.w(TAG, "[HARD-RETRY] Déconnexion ou échec détecté. Attente de 5 secondes avant reconnexion...")
+            delay(5000)
+            
+            if (!isExplicitQuitByUser && cachedRoomName.isNotEmpty() && cachedIdentity.isNotEmpty()) {
+                Log.i(TAG, "[HARD-RETRY] Exécution du bouton virtuel 'Rejoindre' natif...")
+                
+                // Nettoyage de l'ancienne room instanciée pour repartir sur une base 100% propre
+                try {
+                    room?.disconnect()
+                } catch (e: Exception) {}
+                room = null
+                
+                fetchTokenAndConnect(cachedRoomName, cachedIdentity, currentSessionName)
             }
         }
     }
 
     fun stopService() {
         Log.i(TAG, "[LIFECYCLE] stopService appele")
+        isExplicitQuitByUser = true // Bloque instantanément toute boucle de retry en arrière-plan
         stopKeepAliveAudio()
         serviceJob.cancel()
         room?.disconnect()
