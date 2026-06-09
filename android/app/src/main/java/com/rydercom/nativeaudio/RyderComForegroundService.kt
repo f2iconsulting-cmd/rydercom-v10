@@ -83,6 +83,7 @@ class RyderComForegroundService : Service() {
     private var cachedRoomName: String = ""
     private var cachedIdentity: String = ""
     private var isExplicitQuitByUser: Boolean = false
+    private var isRetryPending: Boolean = false
 
     override fun onCreate() {
         super.onCreate()
@@ -305,32 +306,52 @@ class RyderComForegroundService : Service() {
 
     // ── MÉTHODE HARD : Fonction de planification de Retry automatique ──
     private fun scheduleHardRetry() {
+        Log.i(TAG, "[HARD-RETRY] Entree | isExplicitQuit=$isExplicitQuitByUser | isRetryPending=$isRetryPending | room=${room?.state} | cached=$cachedRoomName")
         if (isExplicitQuitByUser) {
-            Log.i(TAG, "[HARD-RETRY] Annulé : Déconnexion volontaire de l'utilisateur.")
+            Log.w(TAG, "[HARD-RETRY] BLOQUE — isExplicitQuitByUser=true")
+            updateState("HARD-RETRY:BLOQUE-QUIT")
             return
         }
-        
+        if (isRetryPending) {
+            Log.w(TAG, "[HARD-RETRY] BLOQUE — isRetryPending=true, retry deja en cours")
+            updateState("HARD-RETRY:BLOQUE-PENDING")
+            return
+        }
+        isRetryPending = true
+        updateState("HARD-RETRY:PLANIFIE")
         serviceScope.launch {
-            Log.w(TAG, "[HARD-RETRY] Déconnexion ou échec détecté. Attente de 5 secondes avant reconnexion...")
-            delay(5000)
-            
-            if (!isExplicitQuitByUser && cachedRoomName.isNotEmpty() && cachedIdentity.isNotEmpty()) {
-                Log.i(TAG, "[HARD-RETRY] Exécution du bouton virtuel 'Rejoindre' natif...")
-                
-                // Nettoyage de l'ancienne room instanciée pour repartir sur une base 100% propre
-                try {
-                    room?.disconnect()
-                } catch (e: Exception) {}
-                room = null
-                
-                fetchTokenAndConnect(cachedRoomName, cachedIdentity, currentSessionName)
+            try {
+                Log.w(TAG, "[HARD-RETRY] Attente 5s avant relance...")
+                delay(5000)
+                Log.i(TAG, "[HARD-RETRY] Reveil apres delay | isExplicitQuit=$isExplicitQuitByUser | cached=$cachedRoomName | identity=$cachedIdentity")
+                if (!isExplicitQuitByUser && cachedRoomName.isNotEmpty() && cachedIdentity.isNotEmpty()) {
+                    Log.i(TAG, "[HARD-RETRY] Lancement fetchTokenAndConnect...")
+                    updateState("HARD-RETRY:EXECUTE")
+                    try { room?.disconnect() } catch (e: Exception) { Log.e(TAG, "[HARD-RETRY] Erreur disconnect: ${e.message}") }
+                    room = null
+                    isRetryPending = false
+                    fetchTokenAndConnect(cachedRoomName, cachedIdentity, currentSessionName)
+                } else {
+                    Log.e(TAG, "[HARD-RETRY] ABANDON | isExplicitQuit=$isExplicitQuitByUser | cached=$cachedRoomName")
+                    updateState("HARD-RETRY:ABANDON")
+                    isRetryPending = false
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) {
+                    Log.w(TAG, "[HARD-RETRY] Coroutine annulee par Android")
+                    isRetryPending = false
+                    throw e
+                }
+                Log.e(TAG, "[HARD-RETRY] Erreur critique: ${e.message}")
+                isRetryPending = false
             }
         }
     }
 
     fun stopService() {
         Log.i(TAG, "[LIFECYCLE] stopService appele")
-        isExplicitQuitByUser = true // Bloque instantanément toute boucle de retry en arrière-plan
+        isExplicitQuitByUser = true
+        isRetryPending = false
         stopKeepAliveAudio()
         serviceJob.cancel()
         room?.disconnect()
