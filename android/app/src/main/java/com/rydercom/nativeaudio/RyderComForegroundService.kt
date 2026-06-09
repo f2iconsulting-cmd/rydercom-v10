@@ -68,7 +68,7 @@ class RyderComForegroundService : Service() {
     private var currentStatus = "DISCONNECTED"
     private var room: Room? = null
     private val serviceJob = SupervisorJob()
-    private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
+    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
     private var persistentModule: PersistentAudioDeviceModule? = null
     private var keepAliveAudioRecord: AudioRecord? = null
 
