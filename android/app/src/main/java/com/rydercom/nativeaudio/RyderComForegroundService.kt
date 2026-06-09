@@ -93,7 +93,7 @@ class RyderComForegroundService : Service() {
         if (roomName != null && identity != null) {
             serviceScope.launch { fetchTokenAndConnect(roomName, identity, sessionName) }
         }
-        return START_NOT_STICKY
+        return START_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder = binder
