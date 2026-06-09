@@ -37,7 +37,7 @@ class PersistentAudioDeviceModule(private val delegate: AudioDeviceModule) : Aud
     override fun release() { delegate.release() }
     override fun setSpeakerMute(muted: Boolean) { delegate.setSpeakerMute(muted) }
     override fun setMicrophoneMute(muted: Boolean) {
-        Log.w("RyderCom", "[ADM] setMicrophoneMute($muted) intercepte - micro force OUVERT")
+        Log.w("RyderCom", "[ADM] setMicrophoneMute($muted) intercepte — micro force OUVERT")
         delegate.setMicrophoneMute(false)
     }
 }
@@ -49,9 +49,9 @@ class RyderComForegroundService : Service() {
         private const val CHANNEL_ID = "RyderComServiceChannel"
         private const val NOTIFICATION_ID = 888
         const val EXTRA_SESSION_NAME = "sessionName"
-        const val EXTRA_ROOM_NAME = "roomName"
-        const val EXTRA_IDENTITY = "identity"
-        const val WS_URL = "wss://testwave-zq4b8zeh.livekit.cloud"
+        const val EXTRA_ROOM_NAME    = "roomName"
+        const val EXTRA_IDENTITY     = "identity"
+        const val WS_URL    = "wss://testwave-zq4b8zeh.livekit.cloud"
         const val TOKEN_URL = "https://helpful-flower-4129.puter.work/api/get-token"
     }
 
@@ -68,30 +68,32 @@ class RyderComForegroundService : Service() {
     private var currentStatus = "DISCONNECTED"
     private var room: Room? = null
     private val serviceJob = SupervisorJob()
-    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
+    private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
     private var persistentModule: PersistentAudioDeviceModule? = null
     private var keepAliveAudioRecord: AudioRecord? = null
-    private var currentRoomName: String? = null
-    private var currentIdentity: String? = null
-    private var currentSessionName: String? = null
+
+    // Paramètres session — conservés pour reconnexion interne LiveKit SDK
+    private var currentSessionName: String = "Ryde en cours"
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         startKeepAliveAudio()
-        Log.i(TAG, "Service cree")
+        Log.i(TAG, "[LIFECYCLE] Service onCreate")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val sessionName = intent?.getStringExtra(EXTRA_SESSION_NAME) ?: "Ryde en cours"
-        val roomName = intent?.getStringExtra(EXTRA_ROOM_NAME)
-        val identity = intent?.getStringExtra(EXTRA_IDENTITY)
+        val roomName    = intent?.getStringExtra(EXTRA_ROOM_NAME)    ?: ""
+        val identity    = intent?.getStringExtra(EXTRA_IDENTITY)     ?: "Rider"
         currentSessionName = sessionName
-        if (roomName != null) currentRoomName = roomName
-        if (identity != null) currentIdentity = identity
+        Log.i(TAG, "[LIFECYCLE] onStartCommand sessionName=$sessionName roomName=$roomName identity=$identity")
         startForeground(NOTIFICATION_ID, buildNotification(sessionName))
-        if (roomName != null && identity != null) {
-            serviceScope.launch { fetchTokenAndConnect(roomName, identity, sessionName) }
+        if (roomName.isNotEmpty() && identity.isNotEmpty()) {
+            serviceScope.launch {
+                Log.i(TAG, "[TOKEN] Lancement fetchTokenAndConnect room=$roomName identity=$identity")
+                fetchTokenAndConnect(roomName, identity, sessionName)
+            }
         }
         return START_STICKY
     }
@@ -99,7 +101,7 @@ class RyderComForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        Log.i(TAG, "onTaskRemoved - arret propre du service")
+        Log.i(TAG, "[LIFECYCLE] onTaskRemoved — arret propre")
         stopKeepAliveAudio()
         serviceJob.cancel()
         room?.disconnect()
@@ -110,29 +112,28 @@ class RyderComForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        Log.i(TAG, "[LIFECYCLE] onDestroy")
         stopKeepAliveAudio()
         serviceJob.cancel()
         room?.disconnect()
         room = null
         persistentModule = null
-        stopForeground(true)
-        Log.i(TAG, "Service detruit")
         super.onDestroy()
     }
 
     private fun startKeepAliveAudio() {
         try {
-            val sampleRate = 44100
+            val sampleRate   = 44100
             val channelConfig = AudioFormat.CHANNEL_IN_MONO
-            val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-            val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+            val audioFormat  = AudioFormat.ENCODING_PCM_16BIT
+            val bufferSize   = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
             keepAliveAudioRecord = AudioRecord(
                 MediaRecorder.AudioSource.MIC, sampleRate, channelConfig, audioFormat, bufferSize * 2
             )
             keepAliveAudioRecord?.startRecording()
-            Log.i(TAG, "KeepAlive AudioRecord ouvert")
+            Log.i(TAG, "[KEEPALIVE] AudioRecord ouvert")
         } catch (e: Exception) {
-            Log.e(TAG, "Erreur KeepAlive AudioRecord: ${e.message}")
+            Log.e(TAG, "[KEEPALIVE] Erreur: ${e.message}")
         }
     }
 
@@ -141,9 +142,9 @@ class RyderComForegroundService : Service() {
             keepAliveAudioRecord?.stop()
             keepAliveAudioRecord?.release()
             keepAliveAudioRecord = null
-            Log.i(TAG, "KeepAlive AudioRecord ferme")
+            Log.i(TAG, "[KEEPALIVE] AudioRecord ferme")
         } catch (e: Exception) {
-            Log.e(TAG, "Erreur fermeture KeepAlive: ${e.message}")
+            Log.e(TAG, "[KEEPALIVE] Erreur fermeture: ${e.message}")
         }
     }
 
@@ -153,91 +154,82 @@ class RyderComForegroundService : Service() {
 
     private suspend fun fetchTokenAndConnect(roomName: String, identity: String, sessionName: String) {
         try {
-            Log.i(TAG, "Fetch token pour room=$roomName identity=$identity")
-            val url = URL(TOKEN_URL)
+            Log.i(TAG, "[TOKEN] Fetch debut — room=$roomName identity=$identity url=$TOKEN_URL")
+            val url  = URL(TOKEN_URL)
             val conn = url.openConnection() as java.net.HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Content-Type", "application/json")
             conn.doOutput = true
             val body = """{"roomName":"$roomName","participantIdentity":"$identity"}"""
             conn.outputStream.write(body.toByteArray())
+            val responseCode = conn.responseCode
+            Log.i(TAG, "[TOKEN] HTTP responseCode=$responseCode")
             val response = conn.inputStream.bufferedReader().readText()
             val token = JSONObject(response).getString("token")
-            Log.i(TAG, "Token recu OK")
+            Log.i(TAG, "[TOKEN] Token recu OK longueur=${token.length}")
             connectToLiveKit(WS_URL, token, sessionName)
         } catch (e: Exception) {
-            Log.e(TAG, "Erreur fetch token: ${e.message}")
-            updateState("ERROR")
+            Log.e(TAG, "[TOKEN] Erreur fetch token: ${e.message}")
+            updateState("TOKEN_ERROR")
+            updateNotification("Erreur token")
         }
     }
 
-    private fun connectToLiveKit(wsUrl: String, token: String, sessionName: String) {
-        Log.i(TAG, "connectToLiveKit wsUrl=$wsUrl")
+    fun connectToLiveKit(wsUrl: String, token: String, sessionName: String) {
+        Log.i(TAG, "[LIVEKIT] connectToLiveKit wsUrl=$wsUrl sessionName=$sessionName")
         updateState("CONNECTING")
+        updateNotification("Connexion...")
 
         val baseAudioModule = JavaAudioDeviceModule.builder(applicationContext)
             .setUseHardwareAcousticEchoCanceler(true)
             .setUseHardwareNoiseSuppressor(true)
             .createAudioDeviceModule()
-
         persistentModule = PersistentAudioDeviceModule(baseAudioModule)
 
         val localAudioOptions = LocalAudioTrackOptions(
-            noiseSuppression = true,
-            echoCancellation = true,
-            autoGainControl = true,
-            highPassFilter = true,
+            noiseSuppression  = true,
+            echoCancellation  = true,
+            autoGainControl   = true,
+            highPassFilter    = true,
             typingNoiseDetection = false
         )
         val roomOptions = RoomOptions(audioTrackCaptureDefaults = localAudioOptions)
-        val overrides = LiveKitOverrides(
+        val overrides   = LiveKitOverrides(
             audioOptions = AudioOptions(audioDeviceModule = persistentModule)
         )
         val newRoom = LiveKit.create(applicationContext, roomOptions, overrides)
         room = newRoom
+        Log.i(TAG, "[LIVEKIT] Room creee — lancement collect events + connect")
 
         serviceScope.launch {
             newRoom.events.events.collect { event ->
                 when (event) {
                     is RoomEvent.Connected -> {
+                        Log.i(TAG, "[LIVEKIT] RoomEvent.Connected")
                         updateState("CONNECTED")
-                        updateNotification("Connecte - $sessionName")
+                        updateNotification("Connecte — $sessionName")
                         enableMicrophone()
                     }
                     is RoomEvent.Disconnected -> {
+                        Log.w(TAG, "[LIVEKIT] RoomEvent.Disconnected")
                         updateState("DISCONNECTED")
                         updateNotification("Deconnecte")
-                        // Reconnexion automatique
-                        val rn = currentRoomName
-                        val id = currentIdentity
-                        val sn = currentSessionName ?: "Ryde"
-                        if (rn != null && id != null) {
-                            Log.i(TAG, "Reconnexion automatique dans 2s...")
-                            kotlinx.coroutines.delay(2000)
-                            fetchTokenAndConnect(rn, id, sn)
-                        }
                     }
                     is RoomEvent.Reconnecting -> {
+                        Log.w(TAG, "[LIVEKIT] RoomEvent.Reconnecting")
                         updateState("RECONNECTING")
                         updateNotification("Reconnexion...")
                     }
                     is RoomEvent.Reconnected -> {
+                        Log.i(TAG, "[LIVEKIT] RoomEvent.Reconnected")
                         updateState("CONNECTED")
-                        updateNotification("Reconnecte - $sessionName")
+                        updateNotification("Reconnecte — $sessionName")
                         enableMicrophone()
                     }
                     is RoomEvent.FailedToConnect -> {
+                        Log.e(TAG, "[LIVEKIT] RoomEvent.FailedToConnect")
                         updateState("ERROR")
                         updateNotification("Echec connexion")
-                        // Retry
-                        val rn = currentRoomName
-                        val id = currentIdentity
-                        val sn = currentSessionName ?: "Ryde"
-                        if (rn != null && id != null) {
-                            Log.i(TAG, "Retry apres echec dans 3s...")
-                            kotlinx.coroutines.delay(3000)
-                            fetchTokenAndConnect(rn, id, sn)
-                        }
                     }
                     else -> {}
                 }
@@ -246,22 +238,24 @@ class RyderComForegroundService : Service() {
 
         serviceScope.launch {
             try {
+                Log.i(TAG, "[LIVEKIT] newRoom.connect() debut")
                 newRoom.connect(wsUrl, token)
+                Log.i(TAG, "[LIVEKIT] newRoom.connect() termine")
             } catch (e: Exception) {
-                Log.e(TAG, "ECHEC CONNEXION: ${e.message}")
+                Log.e(TAG, "[LIVEKIT] ECHEC connect: ${e.message}")
                 updateState("ERROR")
+                updateNotification("Echec connexion serveur")
             }
         }
     }
 
     fun stopService() {
+        Log.i(TAG, "[LIFECYCLE] stopService appele")
         stopKeepAliveAudio()
         serviceJob.cancel()
         room?.disconnect()
         room = null
         persistentModule = null
-        currentRoomName = null
-        currentIdentity = null
         stopForeground(true)
         stopSelf()
     }
@@ -269,16 +263,19 @@ class RyderComForegroundService : Service() {
     private fun enableMicrophone() {
         serviceScope.launch {
             try {
+                Log.i(TAG, "[MICRO] setMicrophoneEnabled(true) debut")
                 room?.localParticipant?.setMicrophoneEnabled(true)
-                Log.i(TAG, "Microphone active!")
+                Log.i(TAG, "[MICRO] Microphone active!")
                 stateListener?.onStateChanged("MICRO_ACTIVE")
             } catch (e: Exception) {
-                Log.e(TAG, "Erreur micro: ${e.message}")
+                Log.e(TAG, "[MICRO] Erreur: ${e.message}")
+                stateListener?.onStateChanged("MICRO_ERROR")
             }
         }
     }
 
     private fun updateState(state: String) {
+        Log.i(TAG, "[STATE] $currentStatus -> $state")
         currentStatus = state
         stateListener?.onStateChanged(state)
     }
