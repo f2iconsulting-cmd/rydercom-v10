@@ -19,53 +19,36 @@ import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
 @CapacitorPlugin(
-    name = "RyderComNativeAudio",
+    name = "RyderComService",
     permissions = {
         @Permission(alias = "microphone", strings = { Manifest.permission.RECORD_AUDIO }),
         @Permission(alias = "bluetooth", strings = { Manifest.permission.BLUETOOTH_CONNECT }),
         @Permission(alias = "notifications", strings = { "android.permission.POST_NOTIFICATIONS" })
     }
 )
-public class RyderComNativeAudioPlugin extends Plugin
-        implements RyderComForegroundService.LiveKitStateListener {
+public class RyderComNativeAudioPlugin extends Plugin {
 
     private static final String TAG = "RyderComPlugin";
-    public static final String EVENT_CONNECTION_STATE = "connectionStateChange";
-
     private RyderComForegroundService boundService = null;
     private boolean serviceBound = false;
-    private PluginCall pendingJoinCall = null;
-    private String pendingWsUrl = null;
-    private String pendingToken = null;
+    private PluginCall pendingStartCall = null;
     private String pendingSessionName = null;
 
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder binder) {
-            Log.i(TAG, "Service connecté");
-            RyderComForegroundService.LocalBinder lb =
-                (RyderComForegroundService.LocalBinder) binder;
+            Log.i(TAG, "Service connecte");
+            RyderComForegroundService.LocalBinder lb = (RyderComForegroundService.LocalBinder) binder;
             boundService = lb.getService();
-            boundService.setLiveKitStateListener(RyderComNativeAudioPlugin.this);
             serviceBound = true;
-
-            if (pendingWsUrl != null && pendingToken != null) {
-                boundService.connectToLiveKit(pendingWsUrl, pendingToken,
-                    pendingSessionName != null ? pendingSessionName : "RyderCom Labo");
-                pendingWsUrl = null;
-                pendingToken = null;
-                pendingSessionName = null;
-            }
-
-            if (pendingJoinCall != null) {
-                pendingJoinCall.resolve();
-                pendingJoinCall = null;
+            if (pendingStartCall != null) {
+                pendingStartCall.resolve();
+                pendingStartCall = null;
             }
         }
-
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            Log.w(TAG, "Service déconnecté");
+            Log.w(TAG, "Service deconnecte");
             serviceBound = false;
             boundService = null;
         }
@@ -74,7 +57,7 @@ public class RyderComNativeAudioPlugin extends Plugin
     @Override
     public void load() {
         super.load();
-        Log.i(TAG, "Plugin RyderComNativeAudio chargé");
+        Log.i(TAG, "Plugin RyderComService charge");
     }
 
     @Override
@@ -87,69 +70,59 @@ public class RyderComNativeAudioPlugin extends Plugin
     }
 
     @PluginMethod
-    public void joinNativeRoom(PluginCall call) {
-        String wsUrl = call.getString("wsUrl");
-        String token = call.getString("token");
-        String sessionName = call.getString("sessionName", "RyderCom Labo");
-
-        if (wsUrl == null || wsUrl.isEmpty()) { call.reject("wsUrl requis"); return; }
-        if (token == null || token.isEmpty())  { call.reject("token requis"); return; }
-
-        call.setKeepAlive(true);
-
-        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
-            pendingJoinCall   = call;
-            pendingWsUrl      = wsUrl;
-            pendingToken      = token;
+    public void startService(PluginCall call) {
+        String sessionName = call.getString("sessionName", "Ryde en cours");
+        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            pendingStartCall = call;
             pendingSessionName = sessionName;
             requestPermissionForAlias("microphone", call, "microphonePermissionCallback");
             return;
         }
-
-        startAndBind(wsUrl, token, sessionName, call);
+        startAndBind(sessionName, call);
     }
 
     @PermissionCallback
     private void microphonePermissionCallback(PluginCall call) {
-        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO)
-                == PackageManager.PERMISSION_GRANTED) {
-            String wsUrl = pendingWsUrl;
-            String token = pendingToken;
-            String sessionName = pendingSessionName;
-            pendingWsUrl = null; pendingToken = null; pendingSessionName = null;
-            PluginCall c = pendingJoinCall != null ? pendingJoinCall : call;
-            pendingJoinCall = null;
-            if (wsUrl != null && token != null) startAndBind(wsUrl, token, sessionName, c);
+        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            String sn = pendingSessionName != null ? pendingSessionName : "Ryde en cours";
+            pendingSessionName = null;
+            PluginCall c = pendingStartCall != null ? pendingStartCall : call;
+            pendingStartCall = null;
+            startAndBind(sn, c);
         } else {
-            if (pendingJoinCall != null) {
-                pendingJoinCall.reject("Permission microphone refusée");
-                pendingJoinCall = null;
-            }
+            if (pendingStartCall != null) { pendingStartCall.reject("Permission microphone refusee"); pendingStartCall = null; }
         }
     }
 
-    private void startAndBind(String wsUrl, String token, String sessionName, PluginCall call) {
+    private void startAndBind(String sessionName, PluginCall call) {
         Context ctx = getContext();
-
-        Intent serviceIntent = new Intent(ctx, RyderComForegroundService.class);
+        Intent intent = new Intent(ctx, RyderComForegroundService.class);
+        intent.putExtra(RyderComForegroundService.EXTRA_SESSION_NAME, sessionName);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            ctx.startForegroundService(serviceIntent);
+            ctx.startForegroundService(intent);
         } else {
-            ctx.startService(serviceIntent);
+            ctx.startService(intent);
         }
-
         if (!serviceBound) {
-            pendingWsUrl      = wsUrl;
-            pendingToken      = token;
-            pendingSessionName = sessionName;
-            pendingJoinCall   = call;
-            ctx.bindService(new Intent(ctx, RyderComForegroundService.class),
-                serviceConnection, Context.BIND_AUTO_CREATE);
-        } else if (boundService != null) {
-            boundService.connectToLiveKit(wsUrl, token, sessionName);
+            pendingStartCall = call;
+            ctx.bindService(new Intent(ctx, RyderComForegroundService.class), serviceConnection, Context.BIND_AUTO_CREATE);
+        } else {
             call.resolve();
         }
+    }
+
+    @PluginMethod
+    public void stopService(PluginCall call) {
+        Log.i(TAG, "stopService");
+        if (serviceBound && boundService != null) {
+            boundService.stopService();
+        }
+        if (serviceBound) {
+            try { getContext().unbindService(serviceConnection); } catch (Exception e) {}
+            serviceBound = false;
+        }
+        boundService = null;
+        call.resolve();
     }
 
     @PluginMethod
@@ -157,14 +130,10 @@ public class RyderComNativeAudioPlugin extends Plugin
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             boolean micOk = ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
             boolean notifOk = ContextCompat.checkSelfPermission(getContext(), "android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED;
-            if (!micOk || !notifOk) {
-                requestAllPermissions(call, "permissionsCallback");
-                return;
-            }
+            if (!micOk || !notifOk) { requestAllPermissions(call, "permissionsCallback"); return; }
         } else {
             if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissionForAlias("microphone", call, "permissionsCallback");
-                return;
+                requestPermissionForAlias("microphone", call, "permissionsCallback"); return;
             }
         }
         JSObject ret = new JSObject();
@@ -177,22 +146,5 @@ public class RyderComNativeAudioPlugin extends Plugin
         JSObject ret = new JSObject();
         ret.put("status", "all_granted");
         call.resolve(ret);
-    }
-
-    @PluginMethod
-    public void leaveNativeRoom(PluginCall call) {
-        Log.i(TAG, "leaveNativeRoom");
-        if (serviceBound && boundService != null) {
-            boundService.disconnectFromLiveKit();
-        }
-        call.resolve();
-    }
-
-    @Override
-    public void onStateChanged(String state) {
-        Log.i(TAG, "État LiveKit → JS : " + state);
-        JSObject payload = new JSObject();
-        payload.put("state", state);
-        notifyListeners(EVENT_CONNECTION_STATE, payload);
     }
 }
