@@ -30,8 +30,13 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import livekit.org.webrtc.audio.AudioDeviceModule
 import livekit.org.webrtc.audio.JavaAudioDeviceModule
-import java.net.URL
 import org.json.JSONObject
+
+// ── NOUVEAUX IMPORTS POUR OKHTTP (RÉSILIENT EN BACKGROUND) ──
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.MediaType.Companion.toMediaType
 
 class PersistentAudioDeviceModule(private val delegate: AudioDeviceModule) : AudioDeviceModule {
     override fun getNativeAudioDeviceModulePointer(): Long = delegate.nativeAudioDeviceModulePointer
@@ -171,28 +176,43 @@ class RyderComForegroundService : Service() {
     private suspend fun fetchTokenAndConnect(roomName: String, identity: String, sessionName: String) {
         if (isExplicitQuitByUser) return
         try {
-            Log.i(TAG, "[TOKEN] Fetch debut — room=$roomName identity=$identity url=$TOKEN_URL")
+            Log.i(TAG, "[TOKEN] Fetch debut (OkHttp résilient background) — room=$roomName identity=$identity")
             updateState("TOKEN_FETCHING")
-            val url  = URL(TOKEN_URL)
-            val conn = url.openConnection() as java.net.HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.setRequestProperty("Content-Type", "application/json")
-            conn.doOutput = true
-            val body = """{"roomName":"$roomName","participantIdentity":"$identity"}"""
-            conn.outputStream.write(body.toByteArray())
-            val responseCode = conn.responseCode
-            Log.i(TAG, "[TOKEN] HTTP responseCode=$responseCode")
-            val response = conn.inputStream.bufferedReader().readText()
-            val token = JSONObject(response).getString("token")
-            Log.i(TAG, "[TOKEN] Token recu OK longueur=${token.length}")
-            updateState("TOKEN_OK")
-            connectToLiveKit(WS_URL, token, sessionName)
+            
+            // Configuration d'un client OkHttp robuste avec Timeouts
+            val client = OkHttpClient.Builder()
+                .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+
+            val mediaType = "application/json; charset=utf-8".toMediaType()
+            val bodyStr = """{"roomName":"$roomName","participantIdentity":"$identity"}"""
+            val requestBody = bodyStr.toRequestBody(mediaType)
+
+            val request = Request.Builder()
+                .url(TOKEN_URL)
+                .post(requestBody)
+                .build()
+
+            // Exécution de la requête réseau forcée
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw java.io.IOException("Code HTTP inattendu : ${response.code}")
+                }
+                
+                val responseData = response.body?.string() ?: throw java.io.IOException("Corps de réponse vide")
+                val token = JSONObject(responseData).getString("token")
+                
+                Log.i(TAG, "[TOKEN] Token recu OK longueur=${token.length}")
+                updateState("TOKEN_OK")
+                connectToLiveKit(WS_URL, token, sessionName)
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "[TOKEN] Erreur fetch token: ${e.message}")
+            Log.e(TAG, "[TOKEN] Erreur fetch token background: ${e.message}")
             updateState("TOKEN_ERROR")
             updateNotification("Erreur token")
             
-            // ── MÉTHODE HARD : Échec du Fetch Token (ex: Serveur Puter offline) -> Retry dans 5s ──
+            // ── MÉTHODE HARD : Échec du Fetch Token -> Retry dans 5s ──
             scheduleHardRetry()
         }
     }
@@ -238,7 +258,7 @@ class RyderComForegroundService : Service() {
                         updateState("DISCONNECTED")
                         updateNotification("Deconnecte")
                         
-                        // ── MÉTHODE HARD : Déconnexion subie (LiveKit a abandonné) -> On relance la machine ──
+                        // ── MÉTHODE HARD : Déconnexion subie -> On relance la machine ──
                         scheduleHardRetry()
                     }
                     is RoomEvent.Reconnecting -> {
