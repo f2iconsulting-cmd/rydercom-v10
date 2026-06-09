@@ -155,6 +155,7 @@ class RyderComForegroundService : Service() {
     private suspend fun fetchTokenAndConnect(roomName: String, identity: String, sessionName: String) {
         try {
             Log.i(TAG, "[TOKEN] Fetch debut — room=$roomName identity=$identity url=$TOKEN_URL")
+            updateState("TOKEN_FETCHING")
             val url  = URL(TOKEN_URL)
             val conn = url.openConnection() as java.net.HttpURLConnection
             conn.requestMethod = "POST"
@@ -167,6 +168,7 @@ class RyderComForegroundService : Service() {
             val response = conn.inputStream.bufferedReader().readText()
             val token = JSONObject(response).getString("token")
             Log.i(TAG, "[TOKEN] Token recu OK longueur=${token.length}")
+            updateState("TOKEN_OK")
             connectToLiveKit(WS_URL, token, sessionName)
         } catch (e: Exception) {
             Log.e(TAG, "[TOKEN] Erreur fetch token: ${e.message}")
