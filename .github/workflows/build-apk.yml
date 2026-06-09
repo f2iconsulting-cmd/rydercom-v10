@@ -44,9 +44,12 @@ jobs:
           ./gradlew assembleDebug -Pandroid.injected.signing.store.file=${GITHUB_WORKSPACE}/android/app/rydercom-v10.keystore -Pandroid.injected.signing.store.password=rydercom2024 -Pandroid.injected.signing.key.alias=rydercomv10 -Pandroid.injected.signing.key.password=rydercom2024 --stacktrace --no-daemon
         env:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.daemon=false"
-      - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
+      - name: Upload Debug APK as Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: RyderCom-v10-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
+          tag_name: build-${{ github.run_number }}
+          name: RyderCom v10 — Build ${{ github.run_number }}
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
