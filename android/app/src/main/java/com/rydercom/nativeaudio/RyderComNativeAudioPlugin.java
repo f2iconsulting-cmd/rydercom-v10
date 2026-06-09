@@ -26,13 +26,15 @@ import com.getcapacitor.annotation.PermissionCallback;
         @Permission(alias = "notifications", strings = { "android.permission.POST_NOTIFICATIONS" })
     }
 )
-public class RyderComNativeAudioPlugin extends Plugin {
+public class RyderComNativeAudioPlugin extends Plugin
+        implements RyderComForegroundService.LiveKitStateListener {
 
     private static final String TAG = "RyderComPlugin";
+    public static final String EVENT_CONNECTION_STATE = "connectionStateChange";
+
     private RyderComForegroundService boundService = null;
     private boolean serviceBound = false;
     private PluginCall pendingStartCall = null;
-    private String pendingSessionName = null;
 
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
@@ -40,6 +42,7 @@ public class RyderComNativeAudioPlugin extends Plugin {
             Log.i(TAG, "Service connecte");
             RyderComForegroundService.LocalBinder lb = (RyderComForegroundService.LocalBinder) binder;
             boundService = lb.getService();
+            boundService.setLiveKitStateListener(RyderComNativeAudioPlugin.this);
             serviceBound = true;
             if (pendingStartCall != null) {
                 pendingStartCall.resolve();
@@ -72,32 +75,42 @@ public class RyderComNativeAudioPlugin extends Plugin {
     @PluginMethod
     public void startService(PluginCall call) {
         String sessionName = call.getString("sessionName", "Ryde en cours");
-        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        String roomName = call.getString("roomName", "");
+        String identity = call.getString("identity", "Rider");
+
+        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
             pendingStartCall = call;
-            pendingSessionName = sessionName;
             requestPermissionForAlias("microphone", call, "microphonePermissionCallback");
             return;
         }
-        startAndBind(sessionName, call);
+        startAndBind(sessionName, roomName, identity, call);
     }
 
     @PermissionCallback
     private void microphonePermissionCallback(PluginCall call) {
-        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-            String sn = pendingSessionName != null ? pendingSessionName : "Ryde en cours";
-            pendingSessionName = null;
+        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED) {
             PluginCall c = pendingStartCall != null ? pendingStartCall : call;
             pendingStartCall = null;
-            startAndBind(sn, c);
+            String sessionName = c.getString("sessionName", "Ryde en cours");
+            String roomName = c.getString("roomName", "");
+            String identity = c.getString("identity", "Rider");
+            startAndBind(sessionName, roomName, identity, c);
         } else {
-            if (pendingStartCall != null) { pendingStartCall.reject("Permission microphone refusee"); pendingStartCall = null; }
+            if (pendingStartCall != null) {
+                pendingStartCall.reject("Permission microphone refusee");
+                pendingStartCall = null;
+            }
         }
     }
 
-    private void startAndBind(String sessionName, PluginCall call) {
+    private void startAndBind(String sessionName, String roomName, String identity, PluginCall call) {
         Context ctx = getContext();
         Intent intent = new Intent(ctx, RyderComForegroundService.class);
         intent.putExtra(RyderComForegroundService.EXTRA_SESSION_NAME, sessionName);
+        intent.putExtra(RyderComForegroundService.EXTRA_ROOM_NAME, roomName);
+        intent.putExtra(RyderComForegroundService.EXTRA_IDENTITY, identity);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             ctx.startForegroundService(intent);
         } else {
@@ -105,7 +118,8 @@ public class RyderComNativeAudioPlugin extends Plugin {
         }
         if (!serviceBound) {
             pendingStartCall = call;
-            ctx.bindService(new Intent(ctx, RyderComForegroundService.class), serviceConnection, Context.BIND_AUTO_CREATE);
+            ctx.bindService(new Intent(ctx, RyderComForegroundService.class),
+                serviceConnection, Context.BIND_AUTO_CREATE);
         } else {
             call.resolve();
         }
@@ -146,5 +160,13 @@ public class RyderComNativeAudioPlugin extends Plugin {
         JSObject ret = new JSObject();
         ret.put("status", "all_granted");
         call.resolve(ret);
+    }
+
+    @Override
+    public void onStateChanged(String state) {
+        Log.i(TAG, "Etat LiveKit -> JS : " + state);
+        JSObject payload = new JSObject();
+        payload.put("state", state);
+        notifyListeners(EVENT_CONNECTION_STATE, payload);
     }
 }
