@@ -90,6 +90,7 @@ class RyderComForegroundService : Service() {
         createNotificationChannel()
         startKeepAliveAudio()
         Log.i(TAG, "[LIFECYCLE] Service onCreate")
+        updateState("LIFECYCLE:onCreate")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -107,6 +108,8 @@ class RyderComForegroundService : Service() {
         }
 
         Log.i(TAG, "[LIFECYCLE] onStartCommand sessionName=$sessionName roomName=$roomName identity=$identity")
+        updateState("LIFECYCLE:onStartCommand|room=$roomName|intent=${if(intent==null) "NULL-STICKY" else "OK"}")
+        updateState("LIFECYCLE:onStartCommand|room=$roomName|intent=${if(intent==null) "NULL-STICKY" else "OK"}")
         startForeground(NOTIFICATION_ID, buildNotification(sessionName))
         
         if (roomName.isNotEmpty() && identity.isNotEmpty()) {
@@ -122,6 +125,7 @@ class RyderComForegroundService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         Log.i(TAG, "[LIFECYCLE] onTaskRemoved — arret propre")
+        updateState("LIFECYCLE:onTaskRemoved")
         isExplicitQuitByUser = true
         stopKeepAliveAudio()
         serviceJob.cancel()
@@ -134,6 +138,7 @@ class RyderComForegroundService : Service() {
 
     override fun onDestroy() {
         Log.i(TAG, "[LIFECYCLE] onDestroy")
+        updateState("LIFECYCLE:onDestroy")
         isExplicitQuitByUser = true
         stopKeepAliveAudio()
         serviceJob.cancel()
