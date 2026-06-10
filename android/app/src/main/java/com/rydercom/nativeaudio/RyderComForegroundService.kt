@@ -303,6 +303,18 @@ class RyderComForegroundService : Service() {
                         Log.i(TAG, "[LIVEKIT] ParticipantDisconnected: $identity")
                         updateState("PARTICIPANT_DISCONNECTED:$identity")
                     }
+                    is RoomEvent.TrackSubscribed -> {
+                        val identity = event.participant.identity?.value ?: "unknown"
+                        val track = event.track
+                        if (track.kind == io.livekit.android.room.track.Track.Kind.AUDIO) {
+                            Log.i(TAG, "[AUDIO] Flux audio souscrit pour l'invite : $identity, demarrage du track natif")
+                            try {
+                                track.start()
+                            } catch (e: Exception) {
+                                Log.e(TAG, "[AUDIO] Erreur lors du demarrage du track natif : ${e.message}")
+                            }
+                        }
+                    }
                     else -> {}
                 }
             }
