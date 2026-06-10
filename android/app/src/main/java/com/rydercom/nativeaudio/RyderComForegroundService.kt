@@ -293,6 +293,16 @@ class RyderComForegroundService : Service() {
                         // ── MÉTHODE HARD : Échec d'entrée initial dans le salon -> Retry ──
                         scheduleHardRetry()
                     }
+                    is RoomEvent.ParticipantConnected -> {
+                        val identity = event.participant.identity?.value ?: "unknown"
+                        Log.i(TAG, "[LIVEKIT] ParticipantConnected: $identity")
+                        updateState("PARTICIPANT_CONNECTED:$identity")
+                    }
+                    is RoomEvent.ParticipantDisconnected -> {
+                        val identity = event.participant.identity?.value ?: "unknown"
+                        Log.i(TAG, "[LIVEKIT] ParticipantDisconnected: $identity")
+                        updateState("PARTICIPANT_DISCONNECTED:$identity")
+                    }
                     else -> {}
                 }
             }
