@@ -256,18 +256,6 @@ class RyderComForegroundService : Service() {
         val newRoom = LiveKit.create(applicationContext, roomOptions, overrides)
         room = newRoom
         Log.i(TAG, "[LIVEKIT] Room creee — lancement collect events + connect")
-        // Log périodique 5s — état réel LiveKit pour diagnostic
-        serviceScope.launch {
-            while (true) {
-                delay(5000)
-                val r = room ?: break
-                val state = r.state
-                val micEnabled = r.localParticipant.isMicrophoneEnabled()
-                val remoteCount = r.remoteParticipants.size
-                Log.i(TAG, "[DIAG] room.state=$state | mic=$micEnabled | remotePeers=$remoteCount")
-                updateState("DIAG:$state|mic=$micEnabled|peers=$remoteCount")
-            }
-        }
 
         serviceScope.launch {
             newRoom.events.events.collect { event ->
