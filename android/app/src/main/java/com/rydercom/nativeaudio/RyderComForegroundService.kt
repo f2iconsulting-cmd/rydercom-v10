@@ -256,6 +256,18 @@ class RyderComForegroundService : Service() {
         val newRoom = LiveKit.create(applicationContext, roomOptions, overrides)
         room = newRoom
         Log.i(TAG, "[LIVEKIT] Room creee — lancement collect events + connect")
+        // Log périodique 5s — état réel LiveKit pour diagnostic
+        serviceScope.launch {
+            while (true) {
+                delay(5000)
+                val r = room ?: break
+                val state = r.state
+                val micEnabled = r.localParticipant.isMicrophoneEnabled()
+                val remoteCount = r.remoteParticipants.size
+                Log.i(TAG, "[DIAG] room.state=$state | mic=$micEnabled | remotePeers=$remoteCount")
+                updateState("DIAG:$state|mic=$micEnabled|peers=$remoteCount")
+            }
+        }
 
         serviceScope.launch {
             newRoom.events.events.collect { event ->
@@ -340,6 +352,46 @@ class RyderComForegroundService : Service() {
                         val kind = event.track.kind
                         Log.w(TAG, "[LIVEKIT] TrackUnsubscribed: kind=$kind identity=$identity")
                         updateState("TRACK_UNSUBSCRIBED:$identity:$kind")
+                    }
+                    is RoomEvent.ConnectionQualityChanged -> {
+                        val identity = event.participant.identity?.value ?: "unknown"
+                        val quality = event.quality
+                        Log.w(TAG, "[LIVEKIT] ConnectionQualityChanged: $quality identity=$identity")
+                        updateState("CONN_QUALITY:$identity:$quality")
+                    }
+                    is RoomEvent.TrackStreamStateChanged -> {
+                        val state = event.streamState
+                        val kind = event.trackPublication.kind
+                        Log.w(TAG, "[LIVEKIT] TrackStreamStateChanged: $state kind=$kind")
+                        updateState("TRACK_STREAM:$state:$kind")
+                    }
+                    is RoomEvent.LocalTrackSubscribed -> {
+                        val kind = event.publication.kind
+                        Log.i(TAG, "[LIVEKIT] LocalTrackSubscribed: kind=$kind — PC recoit notre audio")
+                        updateState("LOCAL_TRACK_SUBSCRIBED:$kind")
+                    }
+                    is RoomEvent.TrackSubscriptionFailed -> {
+                        val identity = event.participant.identity?.value ?: "unknown"
+                        Log.e(TAG, "[LIVEKIT] TrackSubscriptionFailed: identity=$identity")
+                        updateState("TRACK_SUB_FAILED:$identity")
+                    }
+                    is RoomEvent.TrackMuted -> {
+                        val identity = event.participant.identity?.value ?: "unknown"
+                        val kind = event.publication.kind
+                        Log.w(TAG, "[LIVEKIT] TrackMuted: kind=$kind identity=$identity")
+                        updateState("TRACK_MUTED:$identity:$kind")
+                    }
+                    is RoomEvent.TrackUnmuted -> {
+                        val identity = event.participant.identity?.value ?: "unknown"
+                        val kind = event.publication.kind
+                        Log.i(TAG, "[LIVEKIT] TrackUnmuted: kind=$kind identity=$identity")
+                        updateState("TRACK_UNMUTED:$identity:$kind")
+                    }
+                    is RoomEvent.TrackUnpublished -> {
+                        val identity = event.participant.identity?.value ?: "unknown"
+                        val kind = event.publication.kind
+                        Log.w(TAG, "[LIVEKIT] TrackUnpublished: kind=$kind identity=$identity")
+                        updateState("TRACK_UNPUBLISHED:$identity:$kind")
                     }
                     else -> {}
                 }
