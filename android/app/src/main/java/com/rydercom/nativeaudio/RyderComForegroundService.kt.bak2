@@ -25,18 +25,12 @@ import io.livekit.android.room.track.LocalAudioTrackOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import livekit.org.webrtc.audio.AudioDeviceModule
 import livekit.org.webrtc.audio.JavaAudioDeviceModule
+import java.net.URL
 import org.json.JSONObject
-
-// ── NOUVEAUX IMPORTS POUR OKHTTP (RÉSILIENT EN BACKGROUND) ──
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.MediaType.Companion.toMediaType
 
 class PersistentAudioDeviceModule(private val delegate: AudioDeviceModule) : AudioDeviceModule {
     override fun getNativeAudioDeviceModulePointer(): Long = delegate.nativeAudioDeviceModulePointer
@@ -78,40 +72,23 @@ class RyderComForegroundService : Service() {
     private var persistentModule: PersistentAudioDeviceModule? = null
     private var keepAliveAudioRecord: AudioRecord? = null
 
-    // ── MÉTHODE HARD : Variables de mémorisation de session ──
+    // Paramètres session — conservés pour reconnexion interne LiveKit SDK
     private var currentSessionName: String = "Ryde en cours"
-    private var cachedRoomName: String = ""
-    private var cachedIdentity: String = ""
-    private var isExplicitQuitByUser: Boolean = false
-    private var isRetryPending: Boolean = false
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         startKeepAliveAudio()
         Log.i(TAG, "[LIFECYCLE] Service onCreate")
-        updateState("LIFECYCLE:onCreate")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val sessionName = intent?.getStringExtra(EXTRA_SESSION_NAME) ?: "Ryde en cours"
         val roomName    = intent?.getStringExtra(EXTRA_ROOM_NAME)    ?: ""
         val identity    = intent?.getStringExtra(EXTRA_IDENTITY)     ?: "Rider"
-        
         currentSessionName = sessionName
-        isExplicitQuitByUser = false // Reset à chaque démarrage propre de l'UI
-        
-        // Sauvegarde en mémoire pour les futures relances de la boucle
-        if (roomName.isNotEmpty() && identity.isNotEmpty()) {
-            cachedRoomName = roomName
-            cachedIdentity = identity
-        }
-
         Log.i(TAG, "[LIFECYCLE] onStartCommand sessionName=$sessionName roomName=$roomName identity=$identity")
-        updateState("LIFECYCLE:onStartCommand|room=$roomName|intent=${if(intent==null) "NULL-STICKY" else "OK"}")
-        updateState("LIFECYCLE:onStartCommand|room=$roomName|intent=${if(intent==null) "NULL-STICKY" else "OK"}")
         startForeground(NOTIFICATION_ID, buildNotification(sessionName))
-        
         if (roomName.isNotEmpty() && identity.isNotEmpty()) {
             serviceScope.launch {
                 Log.i(TAG, "[TOKEN] Lancement fetchTokenAndConnect room=$roomName identity=$identity")
@@ -125,14 +102,6 @@ class RyderComForegroundService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         Log.i(TAG, "[LIFECYCLE] onTaskRemoved — arret propre")
-        updateState("LIFECYCLE:onTaskRemoved")
-        isExplicitQuitByUser = true
-        try {
-            val am = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-            am.mode = android.media.AudioManager.MODE_NORMAL
-            am.isSpeakerphoneOn = false
-            Log.i(TAG, "[AUDIO] Mode audio remis a NORMAL via onTaskRemoved")
-        } catch (e: Exception) { Log.e(TAG, "[AUDIO] Erreur reset: ${e.message}") }
         stopKeepAliveAudio()
         serviceJob.cancel()
         room?.disconnect()
@@ -144,8 +113,6 @@ class RyderComForegroundService : Service() {
 
     override fun onDestroy() {
         Log.i(TAG, "[LIFECYCLE] onDestroy")
-        updateState("LIFECYCLE:onDestroy")
-        isExplicitQuitByUser = true
         stopKeepAliveAudio()
         serviceJob.cancel()
         room?.disconnect()
@@ -186,52 +153,31 @@ class RyderComForegroundService : Service() {
     }
 
     private suspend fun fetchTokenAndConnect(roomName: String, identity: String, sessionName: String) {
-        if (isExplicitQuitByUser) return
         try {
-            Log.i(TAG, "[TOKEN] Fetch debut (OkHttp résilient background) — room=$roomName identity=$identity")
+            Log.i(TAG, "[TOKEN] Fetch debut — room=$roomName identity=$identity url=$TOKEN_URL")
             updateState("TOKEN_FETCHING")
-            
-            // Configuration d'un client OkHttp robuste avec Timeouts
-            val client = OkHttpClient.Builder()
-                .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
-                .build()
-
-            val mediaType = "application/json; charset=utf-8".toMediaType()
-            val bodyStr = """{"roomName":"$roomName","participantIdentity":"$identity"}"""
-            val requestBody = bodyStr.toRequestBody(mediaType)
-
-            val request = Request.Builder()
-                .url(TOKEN_URL)
-                .post(requestBody)
-                .build()
-
-            // Exécution de la requête réseau forcée
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    throw java.io.IOException("Code HTTP inattendu : ${response.code}")
-                }
-                
-                val responseData = response.body?.string() ?: throw java.io.IOException("Corps de réponse vide")
-                val token = JSONObject(responseData).getString("token")
-                
-                Log.i(TAG, "[TOKEN] Token recu OK longueur=${token.length}")
-                updateState("TOKEN_OK")
-                connectToLiveKit(WS_URL, token, sessionName)
-            }
+            val url  = URL(TOKEN_URL)
+            val conn = url.openConnection() as java.net.HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true
+            val body = """{"roomName":"$roomName","participantIdentity":"$identity"}"""
+            conn.outputStream.write(body.toByteArray())
+            val responseCode = conn.responseCode
+            Log.i(TAG, "[TOKEN] HTTP responseCode=$responseCode")
+            val response = conn.inputStream.bufferedReader().readText()
+            val token = JSONObject(response).getString("token")
+            Log.i(TAG, "[TOKEN] Token recu OK longueur=${token.length}")
+            updateState("TOKEN_OK")
+            connectToLiveKit(WS_URL, token, sessionName)
         } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            Log.e(TAG, "[TOKEN] Erreur fetch token background: ${e.message}")
+            Log.e(TAG, "[TOKEN] Erreur fetch token: ${e.message}")
             updateState("TOKEN_ERROR")
             updateNotification("Erreur token")
-            
-            // ── MÉTHODE HARD : Échec du Fetch Token -> Retry dans 5s ──
-            scheduleHardRetry()
         }
     }
 
     fun connectToLiveKit(wsUrl: String, token: String, sessionName: String) {
-        if (isExplicitQuitByUser) return
         Log.i(TAG, "[LIVEKIT] connectToLiveKit wsUrl=$wsUrl sessionName=$sessionName")
         updateState("CONNECTING")
         updateNotification("Connexion...")
@@ -265,20 +211,11 @@ class RyderComForegroundService : Service() {
                         updateState("CONNECTED")
                         updateNotification("Connecte — $sessionName")
                         enableMicrophone()
-                        // Participants déjà présents dans la room au moment de la connexion
-                        for (participant in newRoom.remoteParticipants.values) {
-                            val identity = participant.identity?.value ?: "unknown"
-                            Log.i(TAG, "[LIVEKIT] Participant deja present: $identity")
-                            updateState("PARTICIPANT_CONNECTED:$identity")
-                        }
                     }
                     is RoomEvent.Disconnected -> {
                         Log.w(TAG, "[LIVEKIT] RoomEvent.Disconnected")
                         updateState("DISCONNECTED")
                         updateNotification("Deconnecte")
-                        
-                        // ── MÉTHODE HARD : Déconnexion subie -> On relance la machine ──
-                        scheduleHardRetry()
                     }
                     is RoomEvent.Reconnecting -> {
                         Log.w(TAG, "[LIVEKIT] RoomEvent.Reconnecting")
@@ -295,31 +232,6 @@ class RyderComForegroundService : Service() {
                         Log.e(TAG, "[LIVEKIT] RoomEvent.FailedToConnect")
                         updateState("ERROR")
                         updateNotification("Echec connexion")
-                        
-                        // ── MÉTHODE HARD : Échec d'entrée initial dans le salon -> Retry ──
-                        scheduleHardRetry()
-                    }
-                    is RoomEvent.ParticipantConnected -> {
-                        val identity = event.participant.identity?.value ?: "unknown"
-                        Log.i(TAG, "[LIVEKIT] ParticipantConnected: $identity")
-                        updateState("PARTICIPANT_CONNECTED:$identity")
-                    }
-                    is RoomEvent.ParticipantDisconnected -> {
-                        val identity = event.participant.identity?.value ?: "unknown"
-                        Log.i(TAG, "[LIVEKIT] ParticipantDisconnected: $identity")
-                        updateState("PARTICIPANT_DISCONNECTED:$identity")
-                    }
-                    is RoomEvent.TrackSubscribed -> {
-                        val identity = event.participant.identity?.value ?: "unknown"
-                        val track = event.track
-                        if (track.kind == io.livekit.android.room.track.Track.Kind.AUDIO) {
-                            Log.i(TAG, "[AUDIO] Flux audio souscrit pour l'invite : $identity, demarrage du track natif")
-                            try {
-                                track.start()
-                            } catch (e: Exception) {
-                                Log.e(TAG, "[AUDIO] Erreur lors du demarrage du track natif : ${e.message}")
-                            }
-                        }
                     }
                     else -> {}
                 }
@@ -332,71 +244,15 @@ class RyderComForegroundService : Service() {
                 newRoom.connect(wsUrl, token)
                 Log.i(TAG, "[LIVEKIT] newRoom.connect() termine")
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e(TAG, "[LIVEKIT] ECHEC connect: ${e.message}")
                 updateState("ERROR")
                 updateNotification("Echec connexion serveur")
-                
-                // ── MÉTHODE HARD : Le connect à crashé -> On planifie la relance ──
-                scheduleHardRetry()
-            }
-        }
-    }
-
-    // ── MÉTHODE HARD : Fonction de planification de Retry automatique ──
-    private fun scheduleHardRetry() {
-        Log.i(TAG, "[HARD-RETRY] Entree | isExplicitQuit=$isExplicitQuitByUser | isRetryPending=$isRetryPending | room=${room?.state} | cached=$cachedRoomName")
-        if (isExplicitQuitByUser) {
-            Log.w(TAG, "[HARD-RETRY] BLOQUE — isExplicitQuitByUser=true")
-            updateState("HARD-RETRY:BLOQUE-QUIT")
-            return
-        }
-        if (isRetryPending) {
-            Log.w(TAG, "[HARD-RETRY] BLOQUE — isRetryPending=true, retry deja en cours")
-            updateState("HARD-RETRY:BLOQUE-PENDING")
-            return
-        }
-        isRetryPending = true
-        updateState("HARD-RETRY:PLANIFIE")
-        serviceScope.launch {
-            try {
-                Log.w(TAG, "[HARD-RETRY] Attente 5s avant relance...")
-                delay(5000)
-                Log.i(TAG, "[HARD-RETRY] Reveil apres delay | isExplicitQuit=$isExplicitQuitByUser | cached=$cachedRoomName | identity=$cachedIdentity")
-                if (!isExplicitQuitByUser && cachedRoomName.isNotEmpty() && cachedIdentity.isNotEmpty()) {
-                    Log.i(TAG, "[HARD-RETRY] Lancement fetchTokenAndConnect...")
-                    updateState("HARD-RETRY:EXECUTE")
-                    try { room?.disconnect() } catch (e: Exception) { Log.e(TAG, "[HARD-RETRY] Erreur disconnect: ${e.message}") }
-                    room = null
-                    isRetryPending = false
-                    fetchTokenAndConnect(cachedRoomName, cachedIdentity, currentSessionName)
-                } else {
-                    Log.e(TAG, "[HARD-RETRY] ABANDON | isExplicitQuit=$isExplicitQuitByUser | cached=$cachedRoomName")
-                    updateState("HARD-RETRY:ABANDON")
-                    isRetryPending = false
-                }
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) {
-                    Log.w(TAG, "[HARD-RETRY] Coroutine annulee par Android")
-                    isRetryPending = false
-                    throw e
-                }
-                Log.e(TAG, "[HARD-RETRY] Erreur critique: ${e.message}")
-                isRetryPending = false
             }
         }
     }
 
     fun stopService() {
         Log.i(TAG, "[LIFECYCLE] stopService appele")
-        isExplicitQuitByUser = true
-        isRetryPending = false
-        try {
-            val am = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-            am.mode = android.media.AudioManager.MODE_NORMAL
-            am.isSpeakerphoneOn = false
-            Log.i(TAG, "[AUDIO] Mode audio remis a NORMAL via stopService")
-        } catch (e: Exception) { Log.e(TAG, "[AUDIO] Erreur reset: ${e.message}") }
         stopKeepAliveAudio()
         serviceJob.cancel()
         room?.disconnect()

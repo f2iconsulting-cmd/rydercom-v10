@@ -1,6 +1,7 @@
 <!-- ═══════════════════════════════════════════════════
      RyderCom — Historique des versions
      ═══════════════════════════════════════════════════
+     v11.0.7 — Participants déjà présents remontent au reconnect (itération remoteParticipants sur Connected)
      v11.0.6 — Identity fixe basée sur UID Firebase — supprime les fantômes et cartes perdues
      v11.0.5 — track.start() natif sur TrackSubscribed — sécurité audio distante (Gemini)
      v11.0.0 — RELEASE sanctuarisée : architecture LiveKit natif Kotlin stabilisée
@@ -58,7 +59,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#F5F5F2">
-<title>RyderCom v11.0.6</title>
+<title>RyderCom v11.0.7</title>
 <style>
 /* PRIORITÉ ABSOLUE — FOAD BLOCKER */
 :root { --font-title: 'Syne', sans-serif; --font-body: 'DM Sans', sans-serif; }
@@ -1681,7 +1682,7 @@ body.keyboard-open #btnLogout {
   <!-- Centre : pill titre (centré absolument) -->
   <span id="globalHeaderPageTitle" class="global-header-page-title"></span>
   <!-- Droite : vtag -->
-  <span class="header-vtag">v11.0.6</span>
+  <span class="header-vtag">v11.0.7</span>
 </header>
 
 <!-- ══ ÉCRAN 1 : LOGIN ══ -->
@@ -3278,7 +3279,7 @@ function goTo(id, fromPopstate){
       header.innerHTML =
         '<div class="header-brand-text" onclick="goTo(\'pHome\')" style="cursor:pointer;">R<span class="accent">y</span>der<span class="accent">C</span>om</div>' +
         '<span id="globalHeaderPageTitle" class="global-header-page-title"></span>' +
-        '<span class="header-vtag">v11.0.6</span>';
+        '<span class="header-vtag">v11.0.7</span>';
     }
     // Mettre à jour le bloc titre session
     const st = document.getElementById('sessNameLabel');
@@ -3315,7 +3316,7 @@ function goTo(id, fromPopstate){
         header.innerHTML =
           '<div class="header-brand-text" onclick="goTo(\'pHome\')" style="cursor:pointer;">R<span class="accent">y</span>der<span class="accent">C</span>om</div>' +
           '<span id="globalHeaderPageTitle" class="global-header-page-title"></span>' +
-          '<span class="header-vtag">v11.0.6</span>';
+          '<span class="header-vtag">v11.0.7</span>';
       }
       header.style.display='flex';
     }
