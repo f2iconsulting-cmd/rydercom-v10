@@ -270,6 +270,14 @@ class RyderComForegroundService : Service() {
                             val identity = participant.identity?.value ?: "unknown"
                             Log.i(TAG, "[LIVEKIT] Participant deja present: $identity")
                             updateState("PARTICIPANT_CONNECTED:$identity")
+                            // Tracks déjà souscrites — démarrage audio immédiat
+                            for (trackPub in participant.trackPublications.values) {
+                                val track = trackPub.track
+                                if (track != null && track.kind == io.livekit.android.room.track.Track.Kind.AUDIO) {
+                                    Log.i(TAG, "[AUDIO] Track deja presente pour $identity — demarrage")
+                                    try { track.start() } catch (e: Exception) { Log.e(TAG, "[AUDIO] Erreur track deja presente: ${e.message}") }
+                                }
+                            }
                         }
                     }
                     is RoomEvent.Disconnected -> {
