@@ -366,9 +366,8 @@ class RyderComForegroundService : Service() {
                         updateState("TRACK_STREAM:$state:$kind")
                     }
                     is RoomEvent.LocalTrackSubscribed -> {
-                        val kind = event.publication.kind
-                        Log.i(TAG, "[LIVEKIT] LocalTrackSubscribed: kind=$kind — PC recoit notre audio")
-                        updateState("LOCAL_TRACK_SUBSCRIBED:$kind")
+                        Log.i(TAG, "[LIVEKIT] LocalTrackSubscribed — PC recoit notre audio")
+                        updateState("LOCAL_TRACK_SUBSCRIBED")
                     }
                     is RoomEvent.TrackSubscriptionFailed -> {
                         val identity = event.participant.identity?.value ?: "unknown"
