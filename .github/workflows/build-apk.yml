@@ -30,6 +30,19 @@ jobs:
         run: npm ci
       - name: Sync Capacitor
         run: npx cap sync android
+      - name: Generate launcher icons from logo
+        run: |
+          sudo apt-get install -y imagemagick 2>/dev/null
+          convert www/logo-hero.png -resize 192x192 -background black -gravity center -extent 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          convert www/logo-hero.png -resize 144x144 -background black -gravity center -extent 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert www/logo-hero.png -resize 96x96 -background black -gravity center -extent 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert www/logo-hero.png -resize 72x72 -background black -gravity center -extent 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert www/logo-hero.png -resize 48x48 -background black -gravity center -extent 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          cp android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          cp android/app/src/main/res/mipmap-xhdpi/ic_launcher.png android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          cp android/app/src/main/res/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          cp android/app/src/main/res/mipmap-mdpi/ic_launcher.png android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
       - name: Decode and prepare fixed keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
