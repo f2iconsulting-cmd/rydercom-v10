@@ -84,6 +84,7 @@ class RyderComForegroundService : Service() {
     private var cachedIdentity: String = ""
     private var isExplicitQuitByUser: Boolean = false
     private var isRetryPending: Boolean = false
+    private var localTrackPublished: Boolean = false
 
     override fun onCreate() {
         super.onCreate()
@@ -264,7 +265,17 @@ class RyderComForegroundService : Service() {
                         Log.i(TAG, "[LIVEKIT] RoomEvent.Connected")
                         updateState("CONNECTED")
                         updateNotification("Connecte — $sessionName")
+                        localTrackPublished = false
                         enableMicrophone()
+                        // Watchdog 7s — si TRACK_PUBLISHED pour notre identity n'arrive pas → réactiver micro
+                        serviceScope.launch {
+                            delay(7000)
+                            if (!localTrackPublished && !isExplicitQuitByUser) {
+                                Log.w(TAG, "[WATCHDOG] TRACK_PUBLISHED absent après 7s — réactivation micro")
+                                updateState("MICRO_WATCHDOG:RETRY")
+                                enableMicrophone()
+                            }
+                        }
                         // Participants déjà présents dans la room au moment de la connexion
                         for (participant in newRoom.remoteParticipants.values) {
                             val identity = participant.identity?.value ?: "unknown"
@@ -334,6 +345,10 @@ class RyderComForegroundService : Service() {
                         val kind = event.publication.kind
                         Log.i(TAG, "[LIVEKIT] TrackPublished: kind=$kind identity=$identity")
                         updateState("TRACK_PUBLISHED:$identity:$kind")
+                        if (identity == cachedIdentity && kind == io.livekit.android.room.track.Track.Kind.AUDIO) {
+                            localTrackPublished = true
+                            Log.i(TAG, "[WATCHDOG] TRACK_PUBLISHED local confirmé — micro actif")
+                        }
                     }
                     is RoomEvent.TrackUnsubscribed -> {
                         val identity = event.participant.identity?.value ?: "unknown"
