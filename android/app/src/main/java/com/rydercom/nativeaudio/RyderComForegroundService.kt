@@ -127,6 +127,12 @@ class RyderComForegroundService : Service() {
         Log.i(TAG, "[LIFECYCLE] onTaskRemoved — arret propre")
         updateState("LIFECYCLE:onTaskRemoved")
         isExplicitQuitByUser = true
+        try {
+            val am = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+            am.mode = android.media.AudioManager.MODE_NORMAL
+            am.isSpeakerphoneOn = false
+            Log.i(TAG, "[AUDIO] Mode audio remis a NORMAL via onTaskRemoved")
+        } catch (e: Exception) { Log.e(TAG, "[AUDIO] Erreur reset: ${e.message}") }
         stopKeepAliveAudio()
         serviceJob.cancel()
         room?.disconnect()
@@ -357,6 +363,12 @@ class RyderComForegroundService : Service() {
         Log.i(TAG, "[LIFECYCLE] stopService appele")
         isExplicitQuitByUser = true
         isRetryPending = false
+        try {
+            val am = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+            am.mode = android.media.AudioManager.MODE_NORMAL
+            am.isSpeakerphoneOn = false
+            Log.i(TAG, "[AUDIO] Mode audio remis a NORMAL via stopService")
+        } catch (e: Exception) { Log.e(TAG, "[AUDIO] Erreur reset: ${e.message}") }
         stopKeepAliveAudio()
         serviceJob.cancel()
         room?.disconnect()
