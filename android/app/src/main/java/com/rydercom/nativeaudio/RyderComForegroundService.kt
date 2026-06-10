@@ -329,6 +329,23 @@ class RyderComForegroundService : Service() {
                             }
                         }
                     }
+                    is RoomEvent.LocalTrackPublished -> {
+                        val identity = newRoom.localParticipant.identity?.value ?: "unknown"
+                        val kind = event.publication.kind
+                        Log.i(TAG, "[LIVEKIT] LocalTrackPublished: kind=$kind identity=$identity")
+                        updateState("LOCAL_TRACK_PUBLISHED:$kind")
+                    }
+                    is RoomEvent.LocalTrackUnpublished -> {
+                        val kind = event.publication.kind
+                        Log.w(TAG, "[LIVEKIT] LocalTrackUnpublished: kind=$kind")
+                        updateState("LOCAL_TRACK_UNPUBLISHED:$kind")
+                    }
+                    is RoomEvent.TrackUnsubscribed -> {
+                        val identity = event.participant.identity?.value ?: "unknown"
+                        val kind = event.track.kind
+                        Log.w(TAG, "[LIVEKIT] TrackUnsubscribed: kind=$kind identity=$identity")
+                        updateState("TRACK_UNSUBSCRIBED:$identity:$kind")
+                    }
                     else -> {}
                 }
             }
