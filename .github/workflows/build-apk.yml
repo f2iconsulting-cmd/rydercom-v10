@@ -43,6 +43,10 @@ jobs:
           cp android/app/src/main/res/mipmap-xhdpi/ic_launcher.png android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
           cp android/app/src/main/res/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
           cp android/app/src/main/res/mipmap-mdpi/ic_launcher.png android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          find android/app/src/main/res -name "ic_launcher_foreground.xml" -delete
+          find android/app/src/main/res -name "ic_launcher_background.xml" -delete
+          find android/app/src/main/res/mipmap-anydpi-v26 -name "ic_launcher.xml" -delete
+          find android/app/src/main/res/mipmap-anydpi-v26 -name "ic_launcher_round.xml" -delete
       - name: Decode and prepare fixed keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
