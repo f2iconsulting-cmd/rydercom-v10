@@ -414,6 +414,12 @@ class RyderComForegroundService : Service() {
     }
 
     // ── MÉTHODE HARD : Fonction de planification de Retry automatique ──
+    fun reconnect() {
+        Log.i(TAG, "[LIFECYCLE] reconnect() appelé depuis plugin — forçage HARD-RETRY")
+        updateState("RECONNECT:FORCE")
+        scheduleHardRetry()
+    }
+
     private fun scheduleHardRetry() {
         Log.i(TAG, "[HARD-RETRY] Entree | isExplicitQuit=$isExplicitQuitByUser | isRetryPending=$isRetryPending | room=${room?.state} | cached=$cachedRoomName")
         if (isExplicitQuitByUser) {

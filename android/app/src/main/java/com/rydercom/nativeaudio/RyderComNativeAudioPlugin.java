@@ -107,6 +107,13 @@ public class RyderComNativeAudioPlugin extends Plugin
 
     private void startAndBind(String sessionName, String roomName, String identity, PluginCall call) {
         Context ctx = getContext();
+        if (serviceBound && boundService != null) {
+            // Service déjà actif — reconnexion directe sans nouvelle instance
+            android.util.Log.i("RyderComPlugin", "[PLUGIN] Service déjà lié — reconnect() direct");
+            boundService.reconnect();
+            call.resolve();
+            return;
+        }
         Intent intent = new Intent(ctx, RyderComForegroundService.class);
         intent.putExtra(RyderComForegroundService.EXTRA_SESSION_NAME, sessionName);
         intent.putExtra(RyderComForegroundService.EXTRA_ROOM_NAME, roomName);
@@ -116,13 +123,9 @@ public class RyderComNativeAudioPlugin extends Plugin
         } else {
             ctx.startService(intent);
         }
-        if (!serviceBound) {
-            pendingStartCall = call;
-            ctx.bindService(new Intent(ctx, RyderComForegroundService.class),
-                serviceConnection, Context.BIND_AUTO_CREATE);
-        } else {
-            call.resolve();
-        }
+        pendingStartCall = call;
+        ctx.bindService(new Intent(ctx, RyderComForegroundService.class),
+            serviceConnection, Context.BIND_AUTO_CREATE);
     }
 
     @PluginMethod
