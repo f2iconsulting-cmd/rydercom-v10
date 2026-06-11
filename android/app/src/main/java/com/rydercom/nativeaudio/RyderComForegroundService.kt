@@ -84,6 +84,7 @@ class RyderComForegroundService : Service() {
     private var cachedIdentity: String = ""
     private var isExplicitQuitByUser: Boolean = false
     private var isRetryPending: Boolean = false
+    private var retryJob: Job? = null
     private var localTrackPublished: Boolean = false
 
     override fun onCreate() {
@@ -227,6 +228,8 @@ class RyderComForegroundService : Service() {
             updateNotification("Erreur token")
             
             // ── MÉTHODE HARD : Échec du Fetch Token -> Retry dans 5s ──
+            isRetryPending = false
+            retryJob = null
             scheduleHardRetry()
         }
     }
@@ -265,6 +268,9 @@ class RyderComForegroundService : Service() {
                         Log.i(TAG, "[LIVEKIT] RoomEvent.Connected")
                         updateState("CONNECTED")
                         updateNotification("Connecte — $sessionName")
+                        retryJob?.cancel()
+                        retryJob = null
+                        isRetryPending = false
                         localTrackPublished = false
                         enableMicrophone()
                         // Watchdog 7s — si TRACK_PUBLISHED pour notre identity n'arrive pas → réactiver micro
@@ -434,7 +440,7 @@ class RyderComForegroundService : Service() {
         }
         isRetryPending = true
         updateState("HARD-RETRY:PLANIFIE")
-        serviceScope.launch {
+        retryJob = serviceScope.launch {
             try {
                 Log.w(TAG, "[HARD-RETRY] Attente 5s avant relance...")
                 delay(5000)
