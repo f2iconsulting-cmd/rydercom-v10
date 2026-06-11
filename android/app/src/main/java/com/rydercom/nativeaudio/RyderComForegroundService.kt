@@ -22,6 +22,7 @@ import io.livekit.android.RoomOptions
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
 import io.livekit.android.room.track.LocalAudioTrackOptions
+import io.livekit.android.room.track.AudioTrackPublishDefaults
 import io.livekit.android.audio.AudioSwitchHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -264,18 +265,24 @@ class RyderComForegroundService : Service() {
 
         val baseAudioModule = JavaAudioDeviceModule.builder(applicationContext)
             .setUseHardwareAcousticEchoCanceler(true)
-            .setUseHardwareNoiseSuppressor(true)
+            .setUseHardwareNoiseSuppressor(false)   // NS hardware désactivé — redondant + pollue
             .createAudioDeviceModule()
         persistentModule = PersistentAudioDeviceModule(baseAudioModule)
 
         val localAudioOptions = LocalAudioTrackOptions(
-            noiseSuppression  = true,
-            echoCancellation  = true,
-            autoGainControl   = true,
-            highPassFilter    = true,
+            noiseSuppression     = false,  // NS WebRTC désactivé — casque moto fait mieux
+            echoCancellation     = true,   // AEC maintenu — propre en test HP nu
+            autoGainControl      = false,  // AGC désactivé — niveau naturel
+            highPassFilter       = false,  // HPF désactivé — basses préservées
             typingNoiseDetection = false
         )
-        val roomOptions = RoomOptions(audioTrackCaptureDefaults = localAudioOptions)
+        val roomOptions = RoomOptions(
+            audioTrackCaptureDefaults = localAudioOptions,
+            audioTrackPublishDefaults = AudioTrackPublishDefaults(
+                audioBitrate = 128_000,    // 128 kbps HD (défaut voix ~32k)
+                dtx = false                // pas de coupure discontinue
+            )
+        )
         val audioHandler = AudioSwitchHandler(applicationContext).apply {
             audioDeviceChangeListener = { audioDevices, selectedDevice ->
                 val name = selectedDevice?.javaClass?.simpleName ?: ""
@@ -300,6 +307,7 @@ class RyderComForegroundService : Service() {
         val newRoom = LiveKit.create(applicationContext, roomOptions, overrides)
         room = newRoom
         Log.i(TAG, "[LIVEKIT] Room creee — lancement collect events + connect")
+        updateState("AUDIO_CONFIG:128k|AEC|noNS|noAGC|noHPF")  // v11.4.1
 
         serviceScope.launch {
             newRoom.events.events.collect { event ->
