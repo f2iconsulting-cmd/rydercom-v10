@@ -23,7 +23,6 @@ import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
 import io.livekit.android.room.track.LocalAudioTrackOptions
 import io.livekit.android.audio.AudioSwitchHandler
-import io.livekit.android.audio.AudioDevice
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -76,14 +75,18 @@ class RyderComForegroundService : Service() {
 
     fun selectSpeaker() {
         val handler = activeAudioHandler ?: return
-        val device = handler.availableAudioDevices.filterIsInstance<AudioDevice.Speakerphone>().firstOrNull()
+        val device = handler.availableAudioDevices.firstOrNull {
+            it.javaClass.simpleName == "Speakerphone"
+        }
         if (device != null) handler.selectDevice(device)
         else Log.w(TAG, "[AUDIO] selectSpeaker — Speakerphone non disponible")
     }
 
     fun selectEarpiece() {
         val handler = activeAudioHandler ?: return
-        val device = handler.availableAudioDevices.filterIsInstance<AudioDevice.Earpiece>().firstOrNull()
+        val device = handler.availableAudioDevices.firstOrNull {
+            it.javaClass.simpleName == "Earpiece"
+        }
         if (device != null) handler.selectDevice(device)
         else Log.w(TAG, "[AUDIO] selectEarpiece — Earpiece non disponible")
     }
@@ -274,21 +277,16 @@ class RyderComForegroundService : Service() {
         )
         val roomOptions = RoomOptions(audioTrackCaptureDefaults = localAudioOptions)
         val audioHandler = AudioSwitchHandler(applicationContext).apply {
-            preferredDeviceList = listOf(
-                AudioDevice.BluetoothHeadset::class.java,
-                AudioDevice.Speakerphone::class.java,
-                AudioDevice.WiredHeadset::class.java,
-                AudioDevice.Earpiece::class.java
-            )
-            onAudioDeviceChangeListener = { audioDevices, selectedDevice ->
-                val deviceKey = when (selectedDevice) {
-                    is AudioDevice.BluetoothHeadset -> "bt"
-                    is AudioDevice.Speakerphone     -> "hp"
-                    is AudioDevice.WiredHeadset     -> "ear"
-                    is AudioDevice.Earpiece         -> "ear"
-                    else                            -> "hp"
+            audioDeviceChangeListener = { audioDevices, selectedDevice ->
+                val name = selectedDevice?.javaClass?.simpleName ?: ""
+                val deviceKey = when {
+                    name == "BluetoothHeadset" -> "bt"
+                    name == "Speakerphone"     -> "hp"
+                    name == "WiredHeadset"     -> "ear"
+                    name == "Earpiece"         -> "ear"
+                    else                       -> "hp"
                 }
-                Log.i(TAG, "[AUDIO] Device actif -> $deviceKey (${selectedDevice?.name})")
+                Log.i(TAG, "[AUDIO] Device actif -> $deviceKey ($name)")
                 updateState("AUDIO_DEVICE:$deviceKey")
             }
         }
