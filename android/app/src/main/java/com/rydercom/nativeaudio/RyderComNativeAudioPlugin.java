@@ -165,7 +165,6 @@ public class RyderComNativeAudioPlugin extends Plugin
         call.resolve(ret);
     }
 
-    @Override
     @PluginMethod
     public void setSpeaker(PluginCall call) {
         if (boundService != null) boundService.selectSpeaker();
