@@ -22,6 +22,8 @@ import io.livekit.android.RoomOptions
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
 import io.livekit.android.room.track.LocalAudioTrackOptions
+import io.livekit.android.audio.AudioSwitchHandler
+import io.livekit.android.audio.AudioDevice
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -256,8 +258,19 @@ class RyderComForegroundService : Service() {
             typingNoiseDetection = false
         )
         val roomOptions = RoomOptions(audioTrackCaptureDefaults = localAudioOptions)
+        val audioHandler = AudioSwitchHandler(applicationContext).apply {
+            preferredDeviceList = listOf(
+                AudioDevice.BluetoothHeadset::class.java,
+                AudioDevice.Speakerphone::class.java,
+                AudioDevice.WiredHeadset::class.java,
+                AudioDevice.Earpiece::class.java
+            )
+        }
         val overrides   = LiveKitOverrides(
-            audioOptions = AudioOptions(audioDeviceModule = persistentModule)
+            audioOptions = AudioOptions(
+                audioDeviceModule = persistentModule,
+                audioHandler = audioHandler
+            )
         )
         val newRoom = LiveKit.create(applicationContext, roomOptions, overrides)
         room = newRoom
