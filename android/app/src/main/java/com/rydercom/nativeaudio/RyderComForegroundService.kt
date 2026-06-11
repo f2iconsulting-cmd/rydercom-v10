@@ -72,6 +72,21 @@ class RyderComForegroundService : Service() {
     inner class LocalBinder : Binder() {
         fun getService(): RyderComForegroundService = this@RyderComForegroundService
     }
+    private var activeAudioHandler: AudioSwitchHandler? = null
+
+    fun selectSpeaker() {
+        val handler = activeAudioHandler ?: return
+        val device = handler.availableAudioDevices.filterIsInstance<AudioDevice.Speakerphone>().firstOrNull()
+        if (device != null) handler.selectDevice(device)
+        else Log.w(TAG, "[AUDIO] selectSpeaker — Speakerphone non disponible")
+    }
+
+    fun selectEarpiece() {
+        val handler = activeAudioHandler ?: return
+        val device = handler.availableAudioDevices.filterIsInstance<AudioDevice.Earpiece>().firstOrNull()
+        if (device != null) handler.selectDevice(device)
+        else Log.w(TAG, "[AUDIO] selectEarpiece — Earpiece non disponible")
+    }
 
     private val binder = LocalBinder()
     private var stateListener: LiveKitStateListener? = null
@@ -265,7 +280,19 @@ class RyderComForegroundService : Service() {
                 AudioDevice.WiredHeadset::class.java,
                 AudioDevice.Earpiece::class.java
             )
+            onAudioDeviceChangeListener = { audioDevices, selectedDevice ->
+                val deviceKey = when (selectedDevice) {
+                    is AudioDevice.BluetoothHeadset -> "bt"
+                    is AudioDevice.Speakerphone     -> "hp"
+                    is AudioDevice.WiredHeadset     -> "ear"
+                    is AudioDevice.Earpiece         -> "ear"
+                    else                            -> "hp"
+                }
+                Log.i(TAG, "[AUDIO] Device actif -> $deviceKey (${selectedDevice?.name})")
+                updateState("AUDIO_DEVICE:$deviceKey")
+            }
         }
+        activeAudioHandler = audioHandler
         val overrides   = LiveKitOverrides(
             audioOptions = AudioOptions(
                 audioDeviceModule = persistentModule,

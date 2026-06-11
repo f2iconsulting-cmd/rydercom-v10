@@ -166,10 +166,28 @@ public class RyderComNativeAudioPlugin extends Plugin
     }
 
     @Override
+    @PluginMethod
+    public void setSpeaker(PluginCall call) {
+        if (boundService != null) boundService.selectSpeaker();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void setEarpiece(PluginCall call) {
+        if (boundService != null) boundService.selectEarpiece();
+        call.resolve();
+    }
+
     public void onStateChanged(String state) {
         Log.i(TAG, "Etat LiveKit -> JS : " + state);
         JSObject payload = new JSObject();
         payload.put("state", state);
         notifyListeners(EVENT_CONNECTION_STATE, payload);
+        if (state.startsWith("AUDIO_DEVICE:")) {
+            String device = state.substring("AUDIO_DEVICE:".length());
+            JSObject audioPayload = new JSObject();
+            audioPayload.put("device", device);
+            notifyListeners("audioDeviceChanged", audioPayload);
+        }
     }
 }
