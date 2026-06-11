@@ -444,8 +444,8 @@ class RyderComForegroundService : Service() {
                     updateState("HARD-RETRY:EXECUTE")
                     try { room?.disconnect() } catch (e: Exception) { Log.e(TAG, "[HARD-RETRY] Erreur disconnect: ${e.message}") }
                     room = null
-                    isRetryPending = false
                     fetchTokenAndConnect(cachedRoomName, cachedIdentity, currentSessionName)
+                    isRetryPending = false
                 } else {
                     Log.e(TAG, "[HARD-RETRY] ABANDON | isExplicitQuit=$isExplicitQuitByUser | cached=$cachedRoomName")
                     updateState("HARD-RETRY:ABANDON")
