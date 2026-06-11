@@ -346,6 +346,9 @@ class RyderComForegroundService : Service() {
                             } catch (e: Exception) {
                                 Log.e(TAG, "[AUDIO] Erreur lors du demarrage du track natif : ${e.message}")
                             }
+                            // Carte invité — signal JS au cas où PARTICIPANT_CONNECTED n'a pas été reçu
+                            Log.i(TAG, "[LIVEKIT] TrackSubscribed audio → PARTICIPANT_CONNECTED:$identity")
+                            updateState("PARTICIPANT_CONNECTED:$identity")
                         }
                     }
                     is RoomEvent.TrackPublished -> {
