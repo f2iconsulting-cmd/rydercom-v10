@@ -177,6 +177,27 @@ public class RyderComNativeAudioPlugin extends Plugin
         call.resolve();
     }
 
+    @PluginMethod
+    public void getMediaVolume(PluginCall call) {
+        android.media.AudioManager am = (android.media.AudioManager) getContext().getSystemService(android.content.Context.AUDIO_SERVICE);
+        int max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
+        int current = am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);
+        int percent = max > 0 ? Math.round(current * 100f / max) : 0;
+        JSObject ret = new JSObject();
+        ret.put("level", percent);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void setMediaVolume(PluginCall call) {
+        int level = call.getInt("level", 50);
+        android.media.AudioManager am = (android.media.AudioManager) getContext().getSystemService(android.content.Context.AUDIO_SERVICE);
+        int max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
+        int index = Math.round(level * max / 100f);
+        am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, index, 0);
+        call.resolve();
+    }
+
     public void onStateChanged(String state) {
         Log.i(TAG, "Etat LiveKit -> JS : " + state);
         JSObject payload = new JSObject();
