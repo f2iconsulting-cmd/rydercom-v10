@@ -1,10 +1,13 @@
 <!-- ═══════════════════════════════════════════════════
      RyderCom — Historique des versions
      ═══════════════════════════════════════════════════
+     v11.5.17 — Rydes Favoris : sessionInviteUID + _currentSessionName + invitations auto au lancement HTL
+     v11.5.17 — Rydes Favoris : JS BS1/BS2/BS3 open/close/render/save/delete/picker/patch createSession
+     v11.5.17 — Rydes Favoris : BS3 niveaux + FAB ★ + HTL favori (HTML+CSS)
      v11.5.16 — Journal session : reset (caché) à chaque leaveSession
-     v11.5.16 — Journal session : hint fixed bas de page, monte avec le journal au tap
-     v11.5.16 — Journal session : slide-up toggle via hint, caché par défaut, non-sélectionnable
-     v11.5.16 — FABs pSession : 52px → 60px, bottom:96px alignés gauche/droite (gant moto)
+     v11.5.15 — Journal session : hint fixed bas de page, monte avec le journal au tap
+     v11.5.14 — Journal session : slide-up toggle via hint, caché par défaut, non-sélectionnable
+     v11.5.13 — FABs pSession : 52px → 60px, bottom:96px alignés gauche/droite (gant moto)
      v11.5.12 — Volume BS : fix backdrop flouté + fix backdrop restant après auto-close
      v11.5.11 — Volume BS : fond blanc (comme sessShareSheet) + backdrop flouté, icône gris foncé fixe
      v11.5.10 — Volume BS : fond flouté transparent, pilule, icône gris moyen + status bar #F5F5F2
@@ -152,7 +155,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#F5F5F2">
-<title>RyderCom v11.5.16</title>
+<title>RyderCom v11.5.17</title>
 <style>
 /* PRIORITÉ ABSOLUE — FOAD BLOCKER */
 :root { --font-title: 'Syne', sans-serif; --font-body: 'DM Sans', sans-serif; }
@@ -1298,6 +1301,174 @@ body.keyboard-open #btnLogout {
 .mic-opt-check{font-size:15px;color:var(--green);flex-shrink:0;opacity:0;}
 .mic-opt.active .mic-opt-check{opacity:1;}
 
+
+/* ══ v11.5.17 — RYDES FAVORIS ══ */
+#bsFavoris, #bsFavEdit, #bsFavPicker {
+  position:fixed;bottom:0;left:0;right:0;
+  max-width:430px;margin:0 auto;
+  background:var(--white);
+  border-radius:28px 28px 0 0;
+  z-index:950;
+  transform:translateY(100%);
+  transition:transform .38s cubic-bezier(.25,1.3,.5,1);
+  padding:0 22px 40px;
+  box-shadow:0 -8px 40px rgba(0,0,0,.14);
+  max-height:88vh;overflow-y:auto;
+  touch-action:pan-y;
+}
+#bsFavoris.open, #bsFavEdit.open, #bsFavPicker.open { transform:translateY(0); }
+
+/* Handle commun */
+.bsf-handle {
+  width:40px;height:4px;border-radius:2px;
+  background:#D1CFC8;margin:14px auto 20px;
+}
+.bsf-title {
+  font-family:var(--font-title);
+  font-size:20px;font-weight:800;
+  color:var(--black);padding-bottom:4px;
+}
+.bsf-hint {
+  font-size:11px;font-weight:600;
+  color:rgba(150,150,145,.55);
+  text-align:center;padding:10px 0 4px;
+  user-select:none;-webkit-user-select:none;
+}
+
+/* Carte ryde favori */
+.rydef-card {
+  background:var(--bg);border-radius:16px;
+  padding:14px 16px;margin-bottom:10px;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .12s;
+  user-select:none;-webkit-user-select:none;
+}
+.rydef-card:active { transform:scale(.98); }
+.rydef-card-name {
+  font-family:var(--font-title);
+  font-size:15px;font-weight:800;
+  color:var(--black);margin-bottom:8px;
+  letter-spacing:-.2px;
+}
+.rydef-card-count {
+  font-size:11px;font-weight:600;
+  color:var(--gray);margin-bottom:8px;
+}
+.rydef-chips {
+  display:flex;flex-wrap:wrap;gap:6px;
+}
+.rydef-chip {
+  font-size:11px;font-weight:700;
+  color:var(--green);
+  background:rgba(34,197,94,.1);
+  border-radius:20px;padding:3px 10px;
+}
+.rydef-chip-more {
+  font-size:11px;font-weight:700;
+  color:var(--gray);
+  background:var(--gray-light);
+  border-radius:20px;padding:3px 10px;
+}
+.rydef-empty {
+  text-align:center;padding:40px 0 20px;
+  font-size:13px;color:var(--gray);font-weight:600;
+}
+
+/* Bouton bas BS */
+.bsf-btn-main {
+  width:100%;height:52px;border:none;border-radius:16px;
+  background:var(--green);color:white;
+  font-family:var(--font-title);font-size:15px;font-weight:800;
+  cursor:pointer;margin-top:14px;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .12s;
+}
+.bsf-btn-main:active { transform:scale(.97); }
+.bsf-btn-secondary {
+  width:100%;height:48px;border:1.5px solid var(--gray-light);
+  border-radius:16px;background:var(--bg);
+  color:var(--gray);font-family:var(--font-body);
+  font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;
+  -webkit-tap-highlight-color:transparent;
+}
+.bsf-btn-danger {
+  width:100%;height:44px;border:none;border-radius:14px;
+  background:none;color:#EF4444;
+  font-family:var(--font-body);font-size:13px;font-weight:700;
+  cursor:pointer;margin-top:4px;
+}
+
+/* Champ nom ryde */
+.bsf-input {
+  width:100%;height:52px;border:1.5px solid var(--gray-light);
+  border-radius:14px;background:var(--bg);
+  font-family:var(--font-body);font-size:15px;font-weight:600;
+  color:var(--black);padding:0 16px;
+  box-sizing:border-box;outline:none;margin-bottom:16px;
+}
+.bsf-input:focus { border-color:var(--green); }
+.bsf-section-lbl {
+  font-size:11px;font-weight:800;color:var(--gray);
+  letter-spacing:.5px;text-transform:uppercase;
+  margin-bottom:10px;margin-top:4px;
+}
+
+/* Chips éditables dans BS2 */
+.bsf-edit-chips {
+  display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;min-height:32px;
+}
+.bsf-edit-chip {
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:700;color:var(--green);
+  background:rgba(34,197,94,.1);
+  border-radius:20px;padding:5px 10px 5px 12px;
+}
+.bsf-edit-chip-x {
+  width:16px;height:16px;border-radius:50%;
+  background:rgba(34,197,94,.25);color:var(--green);
+  border:none;font-size:11px;font-weight:900;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  line-height:1;padding:0;
+}
+
+/* BS3 Picker — checkboxes */
+.bsfp-row {
+  display:flex;align-items:center;gap:12px;
+  padding:10px 0;border-bottom:1px solid var(--gray-light);
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;
+}
+.bsfp-row:last-child { border-bottom:none; }
+.bsfp-avatar {
+  width:40px;height:40px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-title);font-size:16px;font-weight:800;
+  flex-shrink:0;
+}
+.bsfp-info { flex:1; }
+.bsfp-surnom { font-size:14px;font-weight:700;color:var(--black); }
+.bsfp-pseudo { font-size:11px;color:var(--gray);font-weight:500; }
+.bsfp-check {
+  width:24px;height:24px;border-radius:50%;
+  border:2px solid var(--gray-light);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .15s;
+}
+.bsfp-check.checked {
+  background:var(--green);border-color:var(--green);
+}
+.bsfp-check.checked::after {
+  content:'';width:6px;height:10px;
+  border:2px solid white;border-top:none;border-left:none;
+  transform:rotate(45deg) translate(-1px,-1px);
+  display:block;
+}
+.bsfp-btn-wrap {
+  position:sticky;bottom:0;background:var(--white);
+  padding:12px 0 0;margin-top:8px;
+}
+
 /* JOURNAL interne Écran 5 */
 #journalSection{
   position:fixed;bottom:40px;left:0;right:0;z-index:25;
@@ -1795,13 +1966,13 @@ body.keyboard-open #btnLogout {
   <!-- Centre : pill titre (centré absolument) -->
   <span id="globalHeaderPageTitle" class="global-header-page-title"></span>
   <!-- Droite : vtag -->
-  <span class="header-vtag">v11.5.16</span>
+  <span class="header-vtag">v11.5.17</span>
 </header>
 
 <!-- ══ ÉCRAN 1 : LOGIN ══ -->
 <div class="page on" id="pLogin">
   <!-- vtag login visible seulement sur cette page -->
-  <div id="loginVtag" style="position:absolute;top:14px;right:14px;font-size:9px;font-weight:700;color:var(--gray);background:var(--gray-light);padding:2px 7px;border-radius:6px;z-index:10;">v11.5.16</div>
+  <div id="loginVtag" style="position:absolute;top:14px;right:14px;font-size:9px;font-weight:700;color:var(--gray);background:var(--gray-light);padding:2px 7px;border-radius:6px;z-index:10;">v11.5.17</div>
   <div class="login-hero">
     <img class="logo-img" id="logo-hero-img" src="logo-hero.png">
     <div style="font-family:var(--font-title);font-size:44px;font-weight:900;letter-spacing:-2px;color:var(--black);margin-top:12px;margin-bottom:6px;line-height:1;">R<span style="color:var(--green);">y</span>der<span style="color:var(--green);">C</span>om</div>
@@ -3160,7 +3331,7 @@ function joinQuitDo()    {
 // ══════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════
-const APP_VERSION='v11.5.16';
+const APP_VERSION='v11.5.17';
 const WS_URL='wss://testwave-zq4b8zeh.livekit.cloud';
 const ROOM_NAME='ridercom-test';
 
@@ -3192,6 +3363,7 @@ function _initHomeSession() {
 
   const sessionId = crypto.randomUUID();
   window._currentSessionId = sessionId;
+  window._currentSessionName = (document.getElementById('htlLabel')?.textContent || '').replace('★','').trim() || 'Ryde en cours';
   window._homeSessionWritten = false; // flag : session pas encore écrite en Firestore
 
   _resetHomeSessionName();
@@ -3398,7 +3570,7 @@ function goTo(id, fromPopstate){
       header.innerHTML =
         '<div class="header-brand-text" onclick="goTo(\'pHome\')" style="cursor:pointer;">R<span class="accent">y</span>der<span class="accent">C</span>om</div>' +
         '<span id="globalHeaderPageTitle" class="global-header-page-title"></span>' +
-        '<span class="header-vtag">v11.5.16</span>';
+        '<span class="header-vtag">v11.5.17</span>';
     }
     // Mettre à jour le bloc titre session
     const st = document.getElementById('sessNameLabel');
@@ -3435,7 +3607,7 @@ function goTo(id, fromPopstate){
         header.innerHTML =
           '<div class="header-brand-text" onclick="goTo(\'pHome\')" style="cursor:pointer;">R<span class="accent">y</span>der<span class="accent">C</span>om</div>' +
           '<span id="globalHeaderPageTitle" class="global-header-page-title"></span>' +
-          '<span class="header-vtag">v11.5.16</span>';
+          '<span class="header-vtag">v11.5.17</span>';
       }
       header.style.display='flex';
     }
@@ -3942,7 +4114,7 @@ function log(msg,type='info'){
   d.innerHTML='<span class="log-ts">'+ts()+'</span><span class="log-msg '+cls+'">'+msg+'</span>';
   el.insertBefore(d,el.firstChild);
 }
-// ── v11.5.16 — Journal slide-up toggle : hint fixe + journal au-dessus
+// ── v11.5.17 — Journal slide-up toggle : hint fixe + journal au-dessus
 function resetSessionLog() {
   const j = document.getElementById('journalSection');
   const h = document.getElementById('gridHint');
@@ -3970,6 +4142,347 @@ function copyLog(){
     const b=document.querySelector('.copy-btn');b.textContent='✅ Copié';setTimeout(()=>b.textContent='📋 Copier',2e3);
   });
 }
+
+
+// ══════════════════════════════════════════════════════
+// v11.5.17 — RYDES FAVORIS
+// ══════════════════════════════════════════════════════
+
+let _favoriActif    = null;  // {id, nom, membres:[{uid,surnom}]}
+let _favEditId      = null;  // null = création, string = édition
+let _favEditMembers = [];    // [{uid,surnom,colorIdx}] en cours d'édition
+let _favPickerSel   = new Set(); // UIDs sélectionnés dans BS3
+let _favPickerAll   = [];    // snapshot meute pour le picker
+
+// ── Couleurs (même palette que meute) ──
+const FAV_COLORS = [
+  {bg:'#E8F5E9',fg:'#2E7D32',border:'#A5D6A7'},
+  {bg:'#E3F2FD',fg:'#1565C0',border:'#90CAF9'},
+  {bg:'#FFF3E0',fg:'#E65100',border:'#FFCC80'},
+  {bg:'#F3E5F5',fg:'#6A1B9A',border:'#CE93D8'},
+  {bg:'#FCE4EC',fg:'#880E4F',border:'#F48FB1'},
+  {bg:'#E0F7FA',fg:'#006064',border:'#80DEEA'},
+];
+
+// ════════════════════════
+// BS1 — LISTE FAVORIS
+// ════════════════════════
+async function bsFavorisOpen() {
+  // Charger meute en cache si pas déjà fait
+  if (!window._meuteData || window._meuteData.length === 0) {
+    await meuteLoadFromFirestore();
+  }
+  await _bsFavorisRender();
+  document.getElementById('bsFavorisOverlay').style.display = 'block';
+  requestAnimationFrame(() => {
+    document.getElementById('bsFavoris').classList.add('open');
+  });
+  homeOverlayOpen();
+}
+
+function bsFavorisClose() {
+  document.getElementById('bsFavoris').classList.remove('open');
+  document.getElementById('bsFavorisOverlay').style.display = 'none';
+  homeOverlayClose();
+}
+
+async function _bsFavorisRender() {
+  const list = document.getElementById('bsFavorisList');
+  if (!list || !myUID) return;
+  list.innerHTML = '<div class="rydef-empty">Chargement…</div>';
+  try {
+    const snap = await db.collection('users').doc(myUID)
+                         .collection('rydesFavoris').get();
+    if (snap.empty) {
+      list.innerHTML = '<div class="rydef-empty">Aucun ryde favori.<br>Crée ton premier ryde !</div>';
+      return;
+    }
+    list.innerHTML = '';
+    snap.docs.forEach(doc => {
+      const d = doc.data();
+      const membres = d.membres || [];
+      const card = document.createElement('div');
+      card.className = 'rydef-card';
+      card.dataset.id = doc.id;
+
+      // Chips : 3 max puis +N
+      const chipsArr = membres.slice(0, 3).map(m =>
+        `<span class="rydef-chip">${m.surnom}</span>`
+      );
+      if (membres.length > 3) {
+        chipsArr.push(`<span class="rydef-chip-more">+${membres.length - 3}</span>`);
+      }
+
+      card.innerHTML = `
+        <div class="rydef-card-name">${d.nom || 'Sans nom'}</div>
+        <div class="rydef-card-count">${membres.length} rider${membres.length > 1 ? 's' : ''}</div>
+        <div class="rydef-chips">${chipsArr.join('')}</div>`;
+
+      // Tap court = lancer, tap long = éditer
+      let _longTimer = null;
+      let _longFired = false;
+      card.addEventListener('touchstart', () => {
+        _longFired = false;
+        _longTimer = setTimeout(() => {
+          _longFired = true;
+          bsFavorisClose();
+          bsFavEditOpen({id: doc.id, nom: d.nom, membres});
+        }, 500);
+      }, {passive:true});
+      card.addEventListener('touchend', () => {
+        clearTimeout(_longTimer);
+        if (!_longFired) _bsFavLancer({id: doc.id, nom: d.nom, membres});
+      }, {passive:true});
+      card.addEventListener('mousedown', () => {
+        _longFired = false;
+        _longTimer = setTimeout(() => {
+          _longFired = true;
+          bsFavorisClose();
+          bsFavEditOpen({id: doc.id, nom: d.nom, membres});
+        }, 500);
+      });
+      card.addEventListener('mouseup', () => {
+        clearTimeout(_longTimer);
+        if (!_longFired) _bsFavLancer({id: doc.id, nom: d.nom, membres});
+      });
+
+      list.appendChild(card);
+    });
+  } catch(e) {
+    list.innerHTML = '<div class="rydef-empty">Erreur chargement.</div>';
+    console.error('[FAV] Erreur render:', e);
+  }
+}
+
+function _bsFavLancer(fav) {
+  _favoriActif = fav;
+  bsFavorisClose();
+  // Charger nom dans HTL
+  const lbl = document.getElementById('htlLabel');
+  if (lbl) lbl.innerHTML =
+    '<span id="htlFavStar" onclick="bsFavReset()" style="color:var(--green);margin-right:4px;cursor:pointer;">★</span>' + fav.nom;
+  log('[FAV] Ryde favori sélectionné : ' + fav.nom, 'ok');
+}
+
+window.bsFavReset = function() {
+  _favoriActif = null;
+  const lbl = document.getElementById('htlLabel');
+  if (lbl) lbl.textContent = 'Lancer le Ryde';
+};
+
+// ════════════════════════
+// BS2 — EDITEUR
+// ════════════════════════
+function bsFavEditOpen(fav) {
+  _favEditId      = fav ? fav.id : null;
+  _favEditMembers = fav ? [...(fav.membres || [])] : [];
+
+  document.getElementById('bsFavEditTitle').textContent = fav ? 'Modifier le ryde' : 'Nouveau ryde';
+  document.getElementById('bsFavEditNom').value = fav ? (fav.nom || '') : '';
+  document.getElementById('bsFavEditDelete').style.display = fav ? '' : 'none';
+
+  _bsFavEditRenderChips();
+  document.getElementById('bsFavEdit').classList.add('open');
+  homeOverlayOpen();
+}
+
+function bsFavEditClose() {
+  document.getElementById('bsFavEdit').classList.remove('open');
+}
+
+function _bsFavEditRenderChips() {
+  const wrap = document.getElementById('bsFavEditChips');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  _favEditMembers.forEach((m, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'bsf-edit-chip';
+    chip.innerHTML = `${m.surnom}<button class="bsf-edit-chip-x" onclick="_bsFavRemoveMember(${i})">✕</button>`;
+    wrap.appendChild(chip);
+  });
+  if (_favEditMembers.length === 0) {
+    wrap.innerHTML = '<span style="font-size:12px;color:var(--gray);">Aucun rider ajouté</span>';
+  }
+}
+
+window._bsFavRemoveMember = function(idx) {
+  _favEditMembers.splice(idx, 1);
+  _bsFavEditRenderChips();
+};
+
+async function bsFavSave() {
+  const nom = (document.getElementById('bsFavEditNom').value || '').trim();
+  if (!nom) {
+    document.getElementById('bsFavEditNom').focus();
+    return;
+  }
+  if (!myUID) return;
+  const data = {
+    nom,
+    membres: _favEditMembers.map(m => ({uid: m.uid, surnom: m.surnom}))
+  };
+  try {
+    if (_favEditId) {
+      await db.collection('users').doc(myUID)
+               .collection('rydesFavoris').doc(_favEditId).set(data, {merge:true});
+    } else {
+      await db.collection('users').doc(myUID)
+               .collection('rydesFavoris').add(data);
+    }
+    bsFavEditClose();
+    await _bsFavorisRender();
+    document.getElementById('bsFavorisOverlay').style.display = 'block';
+    document.getElementById('bsFavoris').classList.add('open');
+  } catch(e) {
+    console.error('[FAV] Erreur save:', e);
+  }
+}
+
+async function bsFavDelete() {
+  if (!_favEditId || !myUID) return;
+  try {
+    await db.collection('users').doc(myUID)
+             .collection('rydesFavoris').doc(_favEditId).delete();
+    bsFavEditClose();
+    await _bsFavorisRender();
+    document.getElementById('bsFavorisOverlay').style.display = 'block';
+    document.getElementById('bsFavoris').classList.add('open');
+  } catch(e) {
+    console.error('[FAV] Erreur delete:', e);
+  }
+}
+window.bsFavSave   = bsFavSave;
+window.bsFavDelete = bsFavDelete;
+window.bsFavEditOpen  = bsFavEditOpen;
+window.bsFavEditClose = bsFavEditClose;
+window.bsFavorisOpen  = bsFavorisOpen;
+window.bsFavorisClose = bsFavorisClose;
+
+// ════════════════════════
+// BS3 — PICKER MEUTE
+// ════════════════════════
+function bsFavPickerOpen() {
+  _favPickerSel = new Set(_favEditMembers.map(m => m.uid));
+  _favPickerAll = [...(window._meuteData || [])];
+  document.getElementById('bsFavPickerSearch').value = '';
+  _bsFavPickerRender(_favPickerAll);
+  bsFavEditClose();
+  document.getElementById('bsFavPicker').classList.add('open');
+  homeOverlayOpen();
+}
+
+function bsFavPickerClose() {
+  document.getElementById('bsFavPicker').classList.remove('open');
+}
+
+function bsFavPickerFilter(val) {
+  const q = val.toLowerCase();
+  const filtered = _favPickerAll.filter(r =>
+    r.surnom.toLowerCase().includes(q) || r.pseudo.toLowerCase().includes(q)
+  );
+  _bsFavPickerRender(filtered);
+}
+
+function _bsFavPickerRender(list) {
+  const el = document.getElementById('bsFavPickerList');
+  if (!el) return;
+  el.innerHTML = '';
+
+  // Favoris meute en tête
+  const favs    = list.filter(r => r.fav);
+  const normals = list.filter(r => !r.fav);
+  [...favs, ...normals].forEach(r => {
+    const ci = r.colorIdx || 0;
+    const c  = FAV_COLORS[ci % FAV_COLORS.length];
+    const checked = _favPickerSel.has(r.uid);
+    const row = document.createElement('div');
+    row.className = 'bsfp-row';
+    row.innerHTML = `
+      <div class="bsfp-avatar" style="background:${c.bg};color:${c.fg};">${(r.surnom||'?')[0].toUpperCase()}</div>
+      <div class="bsfp-info">
+        <div class="bsfp-surnom">${r.surnom}</div>
+        <div class="bsfp-pseudo">@${r.pseudo}</div>
+      </div>
+      <div class="bsfp-check${checked ? ' checked' : ''}" id="bsfpchk_${r.uid}"></div>`;
+    row.addEventListener('click', () => {
+      if (_favPickerSel.has(r.uid)) {
+        _favPickerSel.delete(r.uid);
+      } else {
+        _favPickerSel.add(r.uid);
+      }
+      const chk = document.getElementById('bsfpchk_' + r.uid);
+      if (chk) chk.className = 'bsfp-check' + (_favPickerSel.has(r.uid) ? ' checked' : '');
+      _bsFavPickerUpdateBtn();
+    });
+    el.appendChild(row);
+  });
+
+  if (list.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:32px 0;font-size:13px;color:var(--gray);">Aucun résultat</div>';
+  }
+  _bsFavPickerUpdateBtn();
+}
+
+function _bsFavPickerUpdateBtn() {
+  const btn = document.getElementById('bsFavPickerAdd');
+  if (btn) btn.textContent = 'Ajouter (' + _favPickerSel.size + ')';
+}
+
+function bsFavPickerConfirm() {
+  // Merge sélection dans _favEditMembers (pas de doublon)
+  _favPickerSel.forEach(uid => {
+    if (!_favEditMembers.find(m => m.uid === uid)) {
+      const r = _favPickerAll.find(x => x.uid === uid);
+      if (r) _favEditMembers.push({uid: r.uid, surnom: r.surnom, colorIdx: r.colorIdx || 0});
+    }
+  });
+  bsFavPickerClose();
+  bsFavEditOpen({id: _favEditId, nom: document.getElementById('bsFavEditNom').value, membres: _favEditMembers});
+}
+window.bsFavPickerOpen    = bsFavPickerOpen;
+window.bsFavPickerFilter  = bsFavPickerFilter;
+window.bsFavPickerConfirm = bsFavPickerConfirm;
+
+// ════════════════════════
+// HTL — invitations auto
+// ════════════════════════
+// Patch createSession pour envoyer invitations si favori actif
+const _origCreateSession = window.createSession;
+window.createSession = async function() {
+  if (typeof _origCreateSession === 'function') await _origCreateSession();
+  if (_favoriActif && _favoriActif.membres && _favoriActif.membres.length > 0) {
+    const membres = _favoriActif.membres;
+    log('[FAV] Invitations auto : ' + membres.map(m => m.surnom).join(', '), 'ok');
+    setTimeout(async () => {
+      for (const m of membres) {
+        try {
+          if (typeof sessionInviteUID === 'function') {
+            await sessionInviteUID(m.uid);
+          }
+        } catch(e) {
+          console.error('[FAV] Erreur invitation ' + m.surnom, e);
+        }
+      }
+      _favoriActif = null;
+      const lbl = document.getElementById('htlLabel');
+      if (lbl) lbl.textContent = 'Lancer le Ryde';
+    }, 1500);
+  }
+};
+
+// homeOverlayClose — ajouter fermeture des BS Favoris
+const _origHomeOverlayClose = window.homeOverlayClose || function(){};
+window.homeOverlayClose = function() {
+  _origHomeOverlayClose();
+  const bsF = document.getElementById('bsFavoris');
+  const bsFE = document.getElementById('bsFavEdit');
+  const bsFP = document.getElementById('bsFavPicker');
+  const ov = document.getElementById('bsFavorisOverlay');
+  if (bsF)  bsF.classList.remove('open');
+  if (bsFE) bsFE.classList.remove('open');
+  if (bsFP) bsFP.classList.remove('open');
+  if (ov)   ov.style.display = 'none';
+};
 
 // ══════════════════════════════════════════
 // SIGNAL RÉSEAU (Bloc complet et nettoyé)
@@ -5849,6 +6362,7 @@ function launchNewSession() {
     const sessionName2 = 'Ryde du ' + now2.getDate() + ' ' + months2[now2.getMonth()] + ' à ' + String(now2.getHours()).padStart(2,'0') + 'h' + String(now2.getMinutes()).padStart(2,'0');
     const expiresAt2 = new Date(Date.now() + 24 * 60 * 60 * 1000);
     window._currentSessionId = sessionId;
+    window._currentSessionName = sessionName2;
     sessionNameVal = sessionName2;
     db.collection('sessions').doc(sessionId).set({
       sessionId: sessionId, name: sessionName2,
@@ -7449,6 +7963,39 @@ function sessionInviteFromMeute() {
   }
 }
 
+// v11.5.17 — Invitation directe par UID (utilisée par Rydes Favoris)
+async function sessionInviteUID(uid) {
+  const sessionId   = window._currentSessionId;
+  const sessionName = window._currentSessionName || 'Ryde en cours';
+  if (!sessionId || !myUID || !uid) return;
+  const expiresAt = firebase.firestore.Timestamp.fromDate(
+    new Date(Date.now() + 24*60*60*1000)
+  );
+  try {
+    const snap = await db.collection('users').doc(uid).get();
+    const existing = snap.exists ? (snap.data().sessionIds || []) : [];
+    const alreadyInvited = existing.some(s => s.id === sessionId && s.role === 'invited');
+    if (alreadyInvited) {
+      log('[FAV] Doublon invitation ignoré uid=' + uid, 'info');
+      return;
+    }
+    await db.collection('users').doc(uid).set({
+      sessionIds: firebase.firestore.FieldValue.arrayUnion({
+        id        : sessionId,
+        name      : sessionName,
+        expiresAt,
+        role      : 'invited',
+        hostUid   : myUID,
+        hostPseudo: myPseudo
+      })
+    }, { merge: true });
+    log('[FAV] Invitation envoyée uid=' + uid, 'ok');
+  } catch(e) {
+    log('[FAV] Erreur invitation uid=' + uid + ' : ' + e.message, 'err');
+  }
+}
+window.sessionInviteUID = sessionInviteUID;
+
 async function inviteSendToFirestore(sessionId, sessionName) {
   if (!_inviteSelected.size || !myUID || !sessionId) return;
   const expiresAt = firebase.firestore.Timestamp.fromDate(new Date(Date.now() + 24*60*60*1000));
@@ -8998,6 +9545,11 @@ function stopBackgroundPiP() {
 
 <!-- v7.4 — FABs HOME : Meute + Invitations -->
 <div class="home-fabs" id="homeFabs">
+  <div class="home-fab" id="homeFabFavoris" onclick="bsFavorisOpen()" title="Rydes Favoris">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+  </div>
   <div class="home-fab" id="homeFabMeute" onclick="homeMeuteOpen()" title="Ma Meute">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -9079,6 +9631,45 @@ function stopBackgroundPiP() {
       <button onclick="_bsiConfirmNo()" style="flex:1;height:50px;border:1.5px solid var(--gray-light);border-radius:14px;background:var(--bg);font-size:14px;font-weight:700;color:var(--black);cursor:pointer;font-family:var(--font-body);">Annuler</button>
       <button onclick="_bsiConfirmYes()" style="flex:1;height:50px;border:none;border-radius:14px;background:#EF4444;font-size:14px;font-weight:700;color:white;cursor:pointer;font-family:var(--font-body);">Supprimer</button>
     </div>
+  </div>
+</div>
+
+
+<!-- v11.5.17 — BS1 RYDES FAVORIS -->
+<div id="bsFavorisOverlay" onclick="bsFavorisClose()" style="display:none;position:fixed;inset:0;z-index:940;background:rgba(10,10,10,.45);"></div>
+<div id="bsFavoris">
+  <div class="bsf-handle"></div>
+  <div class="bsf-title">Mes Rydes</div>
+  <div id="bsFavorisList" style="margin-top:12px;"></div>
+  <div class="bsf-hint">Tap = Lancer &nbsp;·&nbsp; Maintenir = Modifier</div>
+  <button class="bsf-btn-main" onclick="bsFavEditOpen(null)">+ Nouveau ryde</button>
+</div>
+
+<!-- v11.5.17 — BS2 EDITEUR RYDE FAVORI -->
+<div id="bsFavEdit">
+  <div class="bsf-handle"></div>
+  <div class="bsf-title" id="bsFavEditTitle">Nouveau ryde</div>
+  <input class="bsf-input" id="bsFavEditNom" type="text" placeholder="Nom du ryde ex: Duo avec Marie" maxlength="40">
+  <div class="bsf-section-lbl">Riders</div>
+  <div class="bsf-edit-chips" id="bsFavEditChips"></div>
+  <button class="bsf-btn-secondary" onclick="bsFavPickerOpen()">+ Ajouter des riders</button>
+  <button class="bsf-btn-main" id="bsFavEditSave" onclick="bsFavSave()">Enregistrer</button>
+  <button class="bsf-btn-danger" id="bsFavEditDelete" onclick="bsFavDelete()" style="display:none;">Supprimer ce ryde</button>
+</div>
+
+<!-- v11.5.17 — BS3 PICKER MEUTE -->
+<div id="bsFavPicker">
+  <div class="bsf-handle"></div>
+  <div class="bsf-title">Ajouter des riders</div>
+  <div class="meute-search-wrap" style="margin-bottom:12px;">
+    <div class="meute-search-icon">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    </div>
+    <input class="meute-search-input" id="bsFavPickerSearch" type="text" placeholder="Rechercher…" oninput="bsFavPickerFilter(this.value)">
+  </div>
+  <div id="bsFavPickerList"></div>
+  <div class="bsfp-btn-wrap">
+    <button class="bsf-btn-main" id="bsFavPickerAdd" onclick="bsFavPickerConfirm()">Ajouter (0)</button>
   </div>
 </div>
 
