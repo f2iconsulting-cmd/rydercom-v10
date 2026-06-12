@@ -1,8 +1,10 @@
 <!-- ═══════════════════════════════════════════════════
      RyderCom — Historique des versions
      ═══════════════════════════════════════════════════
-     v11.5.14 — Journal session : slide-up toggle via hint, caché par défaut, non-sélectionnable
-     v11.5.14 — FABs pSession : 52px → 60px, bottom:96px alignés gauche/droite (gant moto)
+     v11.5.16 — Journal session : reset (caché) à chaque leaveSession
+     v11.5.16 — Journal session : hint fixed bas de page, monte avec le journal au tap
+     v11.5.16 — Journal session : slide-up toggle via hint, caché par défaut, non-sélectionnable
+     v11.5.16 — FABs pSession : 52px → 60px, bottom:96px alignés gauche/droite (gant moto)
      v11.5.12 — Volume BS : fix backdrop flouté + fix backdrop restant après auto-close
      v11.5.11 — Volume BS : fond blanc (comme sessShareSheet) + backdrop flouté, icône gris foncé fixe
      v11.5.10 — Volume BS : fond flouté transparent, pilule, icône gris moyen + status bar #F5F5F2
@@ -150,7 +152,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#F5F5F2">
-<title>RyderCom v11.5.14</title>
+<title>RyderCom v11.5.16</title>
 <style>
 /* PRIORITÉ ABSOLUE — FOAD BLOCKER */
 :root { --font-title: 'Syne', sans-serif; --font-body: 'DM Sans', sans-serif; }
@@ -667,7 +669,7 @@ input, button, select, textarea {
 .flash-label{font-family:var(--font-title);font-size:18px;font-weight:900;letter-spacing:1px;color:var(--white);display:flex;flex-direction:column;align-items:center;gap:4px;}
 .flash-sub{font-size:9px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:1px;}
 
-/* ── Hint grille v6.0 ── */.grid-hint{text-align:center;padding:14px 8px 0;font-size:11px;font-weight:600;color:rgba(150,150,145,.55);line-height:1.8;cursor:pointer;user-select:none;-webkit-user-select:none;}
+/* ── Hint grille v6.0 ── */.grid-hint{position:fixed;bottom:0;left:0;right:0;z-index:26;text-align:center;padding:10px 8px;font-size:11px;font-weight:600;color:rgba(150,150,145,.55);line-height:1.8;cursor:pointer;user-select:none;-webkit-user-select:none;background:var(--bg);border-top:1px solid var(--gray-light);transition:transform .28s cubic-bezier(.32,1,.46,1);}
 
 /* ── GRILLE PAVÉS ── */
 
@@ -1298,10 +1300,10 @@ body.keyboard-open #btnLogout {
 
 /* JOURNAL interne Écran 5 */
 #journalSection{
-  position:fixed;bottom:0;left:0;right:0;z-index:25;
-  background:var(--bg);border-top:1px solid var(--gray-light);
-  max-height:240px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 14px;
-  transform:translateY(100%);transition:transform .28s cubic-bezier(.32,1,.46,1);
+  position:fixed;bottom:40px;left:0;right:0;z-index:25;
+  background:var(--bg);
+  max-height:220px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 14px;
+  transform:translateY(calc(100% + 40px));transition:transform .28s cubic-bezier(.32,1,.46,1);
 }
 #journalSection::-webkit-scrollbar{display:none;}
 .journal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
@@ -1793,13 +1795,13 @@ body.keyboard-open #btnLogout {
   <!-- Centre : pill titre (centré absolument) -->
   <span id="globalHeaderPageTitle" class="global-header-page-title"></span>
   <!-- Droite : vtag -->
-  <span class="header-vtag">v11.5.14</span>
+  <span class="header-vtag">v11.5.16</span>
 </header>
 
 <!-- ══ ÉCRAN 1 : LOGIN ══ -->
 <div class="page on" id="pLogin">
   <!-- vtag login visible seulement sur cette page -->
-  <div id="loginVtag" style="position:absolute;top:14px;right:14px;font-size:9px;font-weight:700;color:var(--gray);background:var(--gray-light);padding:2px 7px;border-radius:6px;z-index:10;">v11.5.14</div>
+  <div id="loginVtag" style="position:absolute;top:14px;right:14px;font-size:9px;font-weight:700;color:var(--gray);background:var(--gray-light);padding:2px 7px;border-radius:6px;z-index:10;">v11.5.16</div>
   <div class="login-hero">
     <img class="logo-img" id="logo-hero-img" src="logo-hero.png">
     <div style="font-family:var(--font-title);font-size:44px;font-weight:900;letter-spacing:-2px;color:var(--black);margin-top:12px;margin-bottom:6px;line-height:1;">R<span style="color:var(--green);">y</span>der<span style="color:var(--green);">C</span>om</div>
@@ -3158,7 +3160,7 @@ function joinQuitDo()    {
 // ══════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════
-const APP_VERSION='v11.5.14';
+const APP_VERSION='v11.5.16';
 const WS_URL='wss://testwave-zq4b8zeh.livekit.cloud';
 const ROOM_NAME='ridercom-test';
 
@@ -3396,7 +3398,7 @@ function goTo(id, fromPopstate){
       header.innerHTML =
         '<div class="header-brand-text" onclick="goTo(\'pHome\')" style="cursor:pointer;">R<span class="accent">y</span>der<span class="accent">C</span>om</div>' +
         '<span id="globalHeaderPageTitle" class="global-header-page-title"></span>' +
-        '<span class="header-vtag">v11.5.14</span>';
+        '<span class="header-vtag">v11.5.16</span>';
     }
     // Mettre à jour le bloc titre session
     const st = document.getElementById('sessNameLabel');
@@ -3433,7 +3435,7 @@ function goTo(id, fromPopstate){
         header.innerHTML =
           '<div class="header-brand-text" onclick="goTo(\'pHome\')" style="cursor:pointer;">R<span class="accent">y</span>der<span class="accent">C</span>om</div>' +
           '<span id="globalHeaderPageTitle" class="global-header-page-title"></span>' +
-          '<span class="header-vtag">v11.5.14</span>';
+          '<span class="header-vtag">v11.5.16</span>';
       }
       header.style.display='flex';
     }
@@ -3940,13 +3942,27 @@ function log(msg,type='info'){
   d.innerHTML='<span class="log-ts">'+ts()+'</span><span class="log-msg '+cls+'">'+msg+'</span>';
   el.insertBefore(d,el.firstChild);
 }
-// ── v11.5.14 — Journal slide-up toggle
+// ── v11.5.16 — Journal slide-up toggle : hint fixe + journal au-dessus
+function resetSessionLog() {
+  const j = document.getElementById('journalSection');
+  const h = document.getElementById('gridHint');
+  _journalOpen = false;
+  if (j) j.style.transform = 'translateY(calc(100% + 40px))';
+  if (h) h.style.transform = 'translateY(0)';
+}
 let _journalOpen = false;
 function toggleSessionLog() {
   const j = document.getElementById('journalSection');
+  const h = document.getElementById('gridHint');
   if (!j) return;
   _journalOpen = !_journalOpen;
-  j.style.transform = _journalOpen ? 'translateY(0)' : 'translateY(100%)';
+  if (_journalOpen) {
+    j.style.transform = 'translateY(0)';
+    if (h) h.style.transform = 'translateY(-220px)';
+  } else {
+    j.style.transform = 'translateY(calc(100% + 40px))';
+    if (h) h.style.transform = 'translateY(0)';
+  }
 }
 
 function copyLog(){
@@ -7550,6 +7566,7 @@ function _doQuickReconnect(d) {
 
 function leaveSession() {
   console.log("[DECONNEXION] Action Quitter détectée - Nettoyage complet");
+  try { resetSessionLog(); } catch(e) {}
 
   // v7.9-j Bug2 — capture EN PREMIER avant que LiveKit passe les riders en 'left'
   try { _capturePostSessionRiders(); } catch(e) {}
