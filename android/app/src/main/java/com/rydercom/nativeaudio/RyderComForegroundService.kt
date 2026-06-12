@@ -179,26 +179,8 @@ class RyderComForegroundService : Service() {
     }
 
     private fun startKeepAliveAudio() {
-        try {
-            val sampleRate   = 8000
-            val channelConfig = AudioFormat.CHANNEL_IN_MONO
-            val audioFormat  = AudioFormat.ENCODING_PCM_16BIT
-            val bufferSize   = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
-            keepAliveAudioRecord = AudioRecord(
-                MediaRecorder.AudioSource.MIC, sampleRate, channelConfig, audioFormat, bufferSize * 2
-            )
-            keepAliveAudioRecord?.startRecording()
-            Log.i(TAG, "[KEEPALIVE] AudioRecord ouvert")
-            // Lecture buffer en boucle — coupe le sidetone BT hardware (Xiaomi/Qualcomm)
-            val drainBuffer = ShortArray(bufferSize)
-            serviceScope.launch(Dispatchers.IO) {
-                while (keepAliveAudioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
-                    keepAliveAudioRecord?.read(drainBuffer, 0, drainBuffer.size)
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "[KEEPALIVE] Erreur: ${e.message}")
-        }
+        // T6 TEST — keepAlive désactivé : LiveKit JavaAudioDeviceModule suffit-il ?
+        Log.i(TAG, "[KEEPALIVE] désactivé pour test T6")
     }
 
     private fun stopKeepAliveAudio() {

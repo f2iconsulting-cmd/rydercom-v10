@@ -119,6 +119,9 @@
            journal ne doit pas être masqué par les FABs (décaler vers le haut)
      D6 — Taille FABs pSession : trop petits pour gants, augmenter
      T5 — Logger config audio LiveKit au démarrage session : bitrate, AEC/NS/AGC/HPF, mode
+     T6 — Tester suppression keepAliveAudioRecord : FOREGROUND_SERVICE_TYPE_MICROPHONE seul
+           LiveKit JavaAudioDeviceModule maintient peut-être le service sans AudioRecord
+           Si OK → zéro bruit de fond BT. Si KO → revert immédiat sur version précédente
      D7 — FABs pSession : positionnement quand 6 cartes (recouvrement à résoudre)
 
      🔵 TECHNIQUE
