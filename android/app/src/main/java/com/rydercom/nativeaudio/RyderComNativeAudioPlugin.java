@@ -178,6 +178,13 @@ public class RyderComNativeAudioPlugin extends Plugin
     }
 
     @PluginMethod
+    public void showVolumePanel(PluginCall call) {
+        android.media.AudioManager am = (android.media.AudioManager) getContext().getSystemService(android.content.Context.AUDIO_SERVICE);
+        am.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.ADJUST_SAME, android.media.AudioManager.FLAG_SHOW_UI);
+        call.resolve();
+    }
+
+    @PluginMethod
     public void getMediaVolume(PluginCall call) {
         android.media.AudioManager am = (android.media.AudioManager) getContext().getSystemService(android.content.Context.AUDIO_SERVICE);
         int max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
