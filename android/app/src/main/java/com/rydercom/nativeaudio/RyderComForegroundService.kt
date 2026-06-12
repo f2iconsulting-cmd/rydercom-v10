@@ -189,6 +189,13 @@ class RyderComForegroundService : Service() {
             )
             keepAliveAudioRecord?.startRecording()
             Log.i(TAG, "[KEEPALIVE] AudioRecord ouvert")
+            // Lecture buffer en boucle — coupe le sidetone BT hardware (Xiaomi/Qualcomm)
+            val drainBuffer = ShortArray(bufferSize)
+            serviceScope.launch(Dispatchers.IO) {
+                while (keepAliveAudioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                    keepAliveAudioRecord?.read(drainBuffer, 0, drainBuffer.size)
+                }
+            }
         } catch (e: Exception) {
             Log.e(TAG, "[KEEPALIVE] Erreur: ${e.message}")
         }
