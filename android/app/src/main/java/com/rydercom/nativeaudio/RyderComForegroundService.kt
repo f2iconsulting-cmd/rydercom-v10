@@ -180,7 +180,7 @@ class RyderComForegroundService : Service() {
 
     private fun startKeepAliveAudio() {
         try {
-            val sampleRate   = 44100
+            val sampleRate   = 8000
             val channelConfig = AudioFormat.CHANNEL_IN_MONO
             val audioFormat  = AudioFormat.ENCODING_PCM_16BIT
             val bufferSize   = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
