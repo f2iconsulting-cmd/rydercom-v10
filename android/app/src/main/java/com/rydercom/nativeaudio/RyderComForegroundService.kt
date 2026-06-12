@@ -18,6 +18,7 @@ import androidx.core.app.NotificationCompat
 import io.livekit.android.LiveKit
 import io.livekit.android.LiveKitOverrides
 import io.livekit.android.AudioOptions
+import io.livekit.android.audio.AudioType
 import io.livekit.android.RoomOptions
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
@@ -301,7 +302,8 @@ class RyderComForegroundService : Service() {
         val overrides   = LiveKitOverrides(
             audioOptions = AudioOptions(
                 audioDeviceModule = persistentModule,
-                audioHandler = audioHandler
+                audioHandler = audioHandler,
+                audioOutputType = AudioType.MediaAudioType()
             )
         )
         val newRoom = LiveKit.create(applicationContext, roomOptions, overrides)
