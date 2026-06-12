@@ -22,7 +22,7 @@ import io.livekit.android.RoomOptions
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
 import io.livekit.android.room.track.LocalAudioTrackOptions
-import io.livekit.android.room.track.AudioTrackPublishDefaults
+import io.livekit.android.room.participant.AudioTrackPublishDefaults
 import io.livekit.android.audio.AudioSwitchHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -279,7 +279,7 @@ class RyderComForegroundService : Service() {
         val roomOptions = RoomOptions(
             audioTrackCaptureDefaults = localAudioOptions,
             audioTrackPublishDefaults = AudioTrackPublishDefaults(
-                audioBitrate = 128_000,    // 128 kbps HD (défaut voix ~32k)
+                audioBitrate = 40_000,     // 40 kbps — suffit pour HFP 16kHz wideband
                 dtx = false                // pas de coupure discontinue
             )
         )
