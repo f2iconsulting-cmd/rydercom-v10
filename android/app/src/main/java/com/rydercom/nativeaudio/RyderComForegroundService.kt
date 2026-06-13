@@ -74,29 +74,21 @@ class RyderComForegroundService : Service() {
     private var activeAudioHandler: AudioSwitchHandler? = null
 
     fun selectSpeaker() {
-        Log.i(TAG, "[AUDIO] selectSpeaker called — room=${room?.state} activeHandler=${activeAudioHandler != null}")
-        val handler = (room?.audioSwitchHandler ?: activeAudioHandler) ?: run { Log.e(TAG, "[AUDIO] selectSpeaker — handler NULL"); return }
-        Log.i(TAG, "[AUDIO] availableDevices=${handler.availableAudioDevices.map{it.javaClass.simpleName}}")
-        val device = handler.availableAudioDevices.firstOrNull { it.javaClass.simpleName == "Speakerphone" }
-        if (device != null) { handler.selectDevice(device); Log.i(TAG, "[AUDIO] selectDevice(Speakerphone) appelé") }
+        val handler = activeAudioHandler ?: return
+        val device = handler.availableAudioDevices.firstOrNull {
+            it.javaClass.simpleName == "Speakerphone"
+        }
+        if (device != null) handler.selectDevice(device)
         else Log.w(TAG, "[AUDIO] selectSpeaker — Speakerphone non disponible")
     }
 
     fun selectEarpiece() {
-        val handler = (room?.audioSwitchHandler ?: activeAudioHandler) ?: return
+        val handler = activeAudioHandler ?: return
         val device = handler.availableAudioDevices.firstOrNull {
             it.javaClass.simpleName == "Earpiece"
         }
         if (device != null) handler.selectDevice(device)
         else Log.w(TAG, "[AUDIO] selectEarpiece — Earpiece non disponible")
-    }
-    fun selectBluetooth() {
-        val handler = (room?.audioSwitchHandler ?: activeAudioHandler) ?: return
-        val device = handler.availableAudioDevices.firstOrNull {
-            it.javaClass.simpleName == "BluetoothHeadset"
-        }
-        if (device != null) handler.selectDevice(device)
-        else Log.w(TAG, "[AUDIO] selectBluetooth — BluetoothHeadset non disponible")
     }
 
     private val binder = LocalBinder()
@@ -308,9 +300,8 @@ class RyderComForegroundService : Service() {
                     name == "Earpiece"         -> "ear"
                     else                       -> "hp"
                 }
-                val btAvailable = audioDevices.any { it.javaClass.simpleName == "BluetoothHeadset" }
-                Log.i(TAG, "[AUDIO] Device actif -> $deviceKey ($name) btAvailable=$btAvailable")
-                updateState("AUDIO_DEVICE:$deviceKey|bt=${if(btAvailable) "1" else "0"}")
+                Log.i(TAG, "[AUDIO] Device actif -> $deviceKey ($name)")
+                updateState("AUDIO_DEVICE:$deviceKey")
             }
         }
         activeAudioHandler = audioHandler
