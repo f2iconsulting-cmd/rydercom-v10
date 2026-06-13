@@ -3943,6 +3943,7 @@ window.addEventListener('popstate', function(e){
     const CapApp = CapPlugins.App;
     if (CapApp && CapApp.addListener) {
       CapApp.addListener('appUrlOpen', function(data) {
+        alert('[DEBUG] appUrlOpen reçu : ' + (data ? data.url : 'null'));
         if (data && data.url) _handleDeepLink(data.url);
       });
       log('[DEEPLINK] appUrlOpen listener initialisé', 'info');
