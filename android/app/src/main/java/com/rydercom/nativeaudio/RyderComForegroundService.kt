@@ -78,7 +78,7 @@ class RyderComForegroundService : Service() {
         val device = handler.availableAudioDevices.firstOrNull {
             it.javaClass.simpleName == "Speakerphone"
         }
-        if (device != null) handler.selectDevice(device)
+        if (device != null) { handler.selectDevice(device); handler.activate() }
         else Log.w(TAG, "[AUDIO] selectSpeaker — Speakerphone non disponible")
     }
 
@@ -87,7 +87,7 @@ class RyderComForegroundService : Service() {
         val device = handler.availableAudioDevices.firstOrNull {
             it.javaClass.simpleName == "Earpiece"
         }
-        if (device != null) handler.selectDevice(device)
+        if (device != null) { handler.selectDevice(device); handler.activate() }
         else Log.w(TAG, "[AUDIO] selectEarpiece — Earpiece non disponible")
     }
     fun selectBluetooth() {
@@ -95,7 +95,7 @@ class RyderComForegroundService : Service() {
         val device = handler.availableAudioDevices.firstOrNull {
             it.javaClass.simpleName == "BluetoothHeadset"
         }
-        if (device != null) handler.selectDevice(device)
+        if (device != null) { handler.selectDevice(device); handler.activate() }
         else Log.w(TAG, "[AUDIO] selectBluetooth — BluetoothHeadset non disponible")
     }
 
@@ -308,8 +308,9 @@ class RyderComForegroundService : Service() {
                     name == "Earpiece"         -> "ear"
                     else                       -> "hp"
                 }
-                Log.i(TAG, "[AUDIO] Device actif -> $deviceKey ($name)")
-                updateState("AUDIO_DEVICE:$deviceKey")
+                val btAvailable = audioDevices.any { it.javaClass.simpleName == "BluetoothHeadset" }
+                Log.i(TAG, "[AUDIO] Device actif -> $deviceKey ($name) btAvailable=$btAvailable")
+                updateState("AUDIO_DEVICE:$deviceKey|bt=${if(btAvailable) "1" else "0"}")
             }
         }
         activeAudioHandler = audioHandler
