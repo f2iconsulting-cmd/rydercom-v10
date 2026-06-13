@@ -74,28 +74,28 @@ class RyderComForegroundService : Service() {
     private var activeAudioHandler: AudioSwitchHandler? = null
 
     fun selectSpeaker() {
-        val handler = activeAudioHandler ?: return
-        val device = handler.availableAudioDevices.firstOrNull {
-            it.javaClass.simpleName == "Speakerphone"
-        }
-        if (device != null) { handler.selectDevice(device); handler.activate() }
+        Log.i(TAG, "[AUDIO] selectSpeaker called — room=${room?.state} activeHandler=${activeAudioHandler != null}")
+        val handler = (room?.audioSwitchHandler ?: activeAudioHandler) ?: run { Log.e(TAG, "[AUDIO] selectSpeaker — handler NULL"); return }
+        Log.i(TAG, "[AUDIO] availableDevices=${handler.availableAudioDevices.map{it.javaClass.simpleName}}")
+        val device = handler.availableAudioDevices.firstOrNull { it.javaClass.simpleName == "Speakerphone" }
+        if (device != null) { handler.selectDevice(device); Log.i(TAG, "[AUDIO] selectDevice(Speakerphone) appelé") }
         else Log.w(TAG, "[AUDIO] selectSpeaker — Speakerphone non disponible")
     }
 
     fun selectEarpiece() {
-        val handler = activeAudioHandler ?: return
+        val handler = (room?.audioSwitchHandler ?: activeAudioHandler) ?: return
         val device = handler.availableAudioDevices.firstOrNull {
             it.javaClass.simpleName == "Earpiece"
         }
-        if (device != null) { handler.selectDevice(device); handler.activate() }
+        if (device != null) handler.selectDevice(device)
         else Log.w(TAG, "[AUDIO] selectEarpiece — Earpiece non disponible")
     }
     fun selectBluetooth() {
-        val handler = activeAudioHandler ?: return
+        val handler = (room?.audioSwitchHandler ?: activeAudioHandler) ?: return
         val device = handler.availableAudioDevices.firstOrNull {
             it.javaClass.simpleName == "BluetoothHeadset"
         }
-        if (device != null) { handler.selectDevice(device); handler.activate() }
+        if (device != null) handler.selectDevice(device)
         else Log.w(TAG, "[AUDIO] selectBluetooth — BluetoothHeadset non disponible")
     }
 
