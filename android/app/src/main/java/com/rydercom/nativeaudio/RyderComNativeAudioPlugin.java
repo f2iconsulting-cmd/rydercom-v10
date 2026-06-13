@@ -176,6 +176,11 @@ public class RyderComNativeAudioPlugin extends Plugin
         if (boundService != null) boundService.selectEarpiece();
         call.resolve();
     }
+    @PluginMethod
+    public void setBluetooth(PluginCall call) {
+        if (boundService != null) boundService.selectBluetooth();
+        call.resolve();
+    }
 
     @PluginMethod
     public void showVolumePanel(PluginCall call) {

@@ -90,6 +90,14 @@ class RyderComForegroundService : Service() {
         if (device != null) handler.selectDevice(device)
         else Log.w(TAG, "[AUDIO] selectEarpiece — Earpiece non disponible")
     }
+    fun selectBluetooth() {
+        val handler = activeAudioHandler ?: return
+        val device = handler.availableAudioDevices.firstOrNull {
+            it.javaClass.simpleName == "BluetoothHeadset"
+        }
+        if (device != null) handler.selectDevice(device)
+        else Log.w(TAG, "[AUDIO] selectBluetooth — BluetoothHeadset non disponible")
+    }
 
     private val binder = LocalBinder()
     private var stateListener: LiveKitStateListener? = null
