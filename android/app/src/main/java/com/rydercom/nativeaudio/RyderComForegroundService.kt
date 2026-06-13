@@ -320,6 +320,18 @@ class RyderComForegroundService : Service() {
                         isRetryPending = false
                         localTrackPublished = false
                         enableMicrophone()
+                        // Force HP si pas de BT connecté
+                        try {
+                            val am = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+                            val btConnected = am.isBluetoothScoOn || am.isBluetoothA2dpOn
+                            if (!btConnected) {
+                                am.isSpeakerphoneOn = true
+                                Log.i(TAG, "[AUDIO] Pas de BT — forçage haut-parleur")
+                                updateState("AUDIO_DEVICE:hp")
+                            } else {
+                                Log.i(TAG, "[AUDIO] BT détecté — pas de forçage HP")
+                            }
+                        } catch (e: Exception) { Log.e(TAG, "[AUDIO] Erreur forçage HP: ${e.message}") }
                         // Watchdog 7s — si TRACK_PUBLISHED pour notre identity n'arrive pas → réactiver micro
                         serviceScope.launch {
                             delay(7000)
