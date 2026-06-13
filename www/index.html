@@ -13,9 +13,10 @@
   ║  v11.5.19 — FABs home 60px ; journal copie ; FAB+ session   ║
   ║  v11.5.20 — BS Profil+Offre+Suppression ; fix doublon HTML  ║
   ║  v11.5.21 — BS Profil restructurée ; BS Offre vrais pavés   ║
-  ║  v11.5.30 — deep link : github.io/rydercom-legal, intent-filter, assetlinks
-  ║  v11.5.30 — capacitor.config : androidScheme https, deep link WhatsApp
-  ║  v11.5.30 — modales DA quit icônes, swipe bsProfile+bsOffre, MON COMPTE aligné
+  ║  v11.5.31 — buildJoinUrl : retour puter.site, assetlinks.json mis à jour
+  ║  v11.5.31 — deep link : github.io/rydercom-legal, intent-filter, assetlinks
+  ║  v11.5.31 — capacitor.config : androidScheme https, deep link WhatsApp
+  ║  v11.5.31 — modales DA quit icônes, swipe bsProfile+bsOffre, MON COMPTE aligné
   ║  v11.5.27 — offrePickModal, bsOffre mécanique, DA badges, logoutModal restauré
   ║  v11.5.26 — MON COMPTE liste iOS, badge Crew home, window.myUID fix, Ryders maj
   ║  v11.5.25 — badges DA home, modale choix offre, hint detail, window.db fix
@@ -28,7 +29,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#F5F5F2">
-<title>RyderCom v11.5.30</title>
+<title>RyderCom v11.5.31</title>
 <style>
 /* PRIORITÉ ABSOLUE — FOAD BLOCKER */
 :root { --font-title: 'Syne', sans-serif; --font-body: 'DM Sans', sans-serif; }
@@ -1182,7 +1183,7 @@ body.keyboard-open #btnLogout {
 
 
 
-/* ══ v11.5.30 — BS PROFIL + BS OFFRE ══ */
+/* ══ v11.5.31 — BS PROFIL + BS OFFRE ══ */
 #bsProfile, #bsOffre {
   position:fixed;bottom:0;left:0;right:0;
   max-width:430px;margin:0 auto;
@@ -1916,13 +1917,13 @@ body.keyboard-open #btnLogout {
   <!-- Centre : pill titre (centré absolument) -->
   <span id="globalHeaderPageTitle" class="global-header-page-title"></span>
   <!-- Droite : vtag -->
-  <span class="header-vtag">v11.5.30</span>
+  <span class="header-vtag">v11.5.31</span>
 </header>
 
 <!-- ══ ÉCRAN 1 : LOGIN ══ -->
 <div class="page on" id="pLogin">
   <!-- vtag login visible seulement sur cette page -->
-  <div id="loginVtag" style="position:absolute;top:14px;right:14px;font-size:9px;font-weight:700;color:var(--gray);background:var(--gray-light);padding:2px 7px;border-radius:6px;z-index:10;">v11.5.30</div>
+  <div id="loginVtag" style="position:absolute;top:14px;right:14px;font-size:9px;font-weight:700;color:var(--gray);background:var(--gray-light);padding:2px 7px;border-radius:6px;z-index:10;">v11.5.31</div>
   <div class="login-hero">
     <img class="logo-img" id="logo-hero-img" src="logo-hero.png">
     <div style="font-family:var(--font-title);font-size:44px;font-weight:900;letter-spacing:-2px;color:var(--black);margin-top:12px;margin-bottom:6px;line-height:1;">R<span style="color:var(--green);">y</span>der<span style="color:var(--green);">C</span>om</div>
@@ -2729,7 +2730,7 @@ function _syncHomeFabInviteBadge(count) {
 
 // ══ v7.6 — SWIPE DOWN pour fermer bsMeute ══
 document.addEventListener('DOMContentLoaded', function() {
-  // v11.5.30 — swipe down pour fermer bsProfile
+  // v11.5.31 — swipe down pour fermer bsProfile
   const bsProf = document.getElementById('bsProfile');
   if (bsProf) {
     let sy = 0, drag = false;
@@ -2745,7 +2746,7 @@ document.addEventListener('DOMContentLoaded', function() {
       else bsProf.style.transform = '';
     });
   }
-  // v11.5.30 — swipe down pour fermer bsOffre
+  // v11.5.31 — swipe down pour fermer bsOffre
   const bsOff = document.getElementById('bsOffre');
   if (bsOff) {
     let sy = 0, drag = false;
@@ -3482,7 +3483,7 @@ function joinQuitDo()    {
 // ══════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════
-const APP_VERSION='v11.5.30';
+const APP_VERSION='v11.5.31';
 const WS_URL='wss://testwave-zq4b8zeh.livekit.cloud';
 const ROOM_NAME='ridercom-test';
 
@@ -3721,7 +3722,7 @@ function goTo(id, fromPopstate){
       header.innerHTML =
         '<div class="header-brand-text" onclick="goTo(\'pHome\')" style="cursor:pointer;">R<span class="accent">y</span>der<span class="accent">C</span>om</div>' +
         '<span id="globalHeaderPageTitle" class="global-header-page-title"></span>' +
-        '<span class="header-vtag">v11.5.30</span>';
+        '<span class="header-vtag">v11.5.31</span>';
     }
     // Mettre à jour le bloc titre session
     const st = document.getElementById('sessNameLabel');
@@ -3758,7 +3759,7 @@ function goTo(id, fromPopstate){
         header.innerHTML =
           '<div class="header-brand-text" onclick="goTo(\'pHome\')" style="cursor:pointer;">R<span class="accent">y</span>der<span class="accent">C</span>om</div>' +
           '<span id="globalHeaderPageTitle" class="global-header-page-title"></span>' +
-          '<span class="header-vtag">v11.5.30</span>';
+          '<span class="header-vtag">v11.5.31</span>';
       }
       header.style.display='flex';
     }
@@ -7454,7 +7455,7 @@ function buildJoinUrl() {
   // On force l'URL vers puter.site pour que le lien soit cliquable dans WhatsApp etc.
   const isCapacitor = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
   const baseUrl = isCapacitor
-    ? 'https://f2iconsulting-cmd.github.io/rydercom-legal/'
+    ? 'https://rydercom.puter.site/'
     : (window.location.origin + window.location.pathname);
 
   const url = new URL(baseUrl);
@@ -9729,7 +9730,7 @@ function stopBackgroundPiP() {
   </div>
 </div>
 
-<!-- v11.5.30 — BS PROFIL -->
+<!-- v11.5.31 — BS PROFIL -->
 <div id="bsProfileOverlay" onclick="bsProfileClose()"></div>
 <div id="bsProfile">
   <div class="bsf-handle"></div>
