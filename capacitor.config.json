@@ -2,6 +2,14 @@
   "appId": "com.rydercom.nativeaudio",
   "appName": "RyderCom",
   "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
   "plugins": {
     "FirebaseAuthentication": {
       "skipNativeAuth": false,
