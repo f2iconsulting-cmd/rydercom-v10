@@ -72,7 +72,18 @@ class RyderComForegroundService : Service() {
         fun getService(): RyderComForegroundService = this@RyderComForegroundService
     }
     private var activeAudioHandler: AudioSwitchHandler? = null
+    private var userMuted = false
 
+    fun muteMic(muted: Boolean) {
+        userMuted = muted
+        serviceScope.launch {
+            try {
+                room?.localParticipant?.setMicrophoneEnabled(!muted)
+                Log.i(TAG, "[MICRO] muteMic($muted) — micro ${if(muted) "MUTÉ" else "ACTIF"}")
+                updateState(if(muted) "MICRO_MUTED" else "MICRO_ACTIVE")
+            } catch(e: Exception) { Log.e(TAG, "[MICRO] Erreur muteMic: ${e.message}") }
+        }
+    }
     fun selectSpeaker() {
         val handler = activeAudioHandler ?: return
         val device = handler.availableAudioDevices.firstOrNull {
@@ -551,6 +562,10 @@ class RyderComForegroundService : Service() {
     }
 
     private fun enableMicrophone() {
+        if (userMuted) {
+            Log.i(TAG, "[MICRO] enableMicrophone ignoré — userMuted=true")
+            return
+        }
         serviceScope.launch {
             try {
                 Log.i(TAG, "[MICRO] setMicrophoneEnabled(true) debut")
