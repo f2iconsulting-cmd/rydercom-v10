@@ -14,30 +14,30 @@
   ║  v11.5.20 — BS Profil+Offre+Suppression ; fix doublon HTML  ║
   ║  v11.5.21 — BS Profil restructurée ; BS Offre vrais pavés   ║
   ║  v11.5.37 — deep link : alerts virées, QR code OK
-  ║  v11.5.52 — HTL : reflow forcé onde dynamique (void offsetWidth)
-  ║  v11.5.52 — pSession : FAB musique déplacé droite (avec alerte), + seul à gauche
+  ║  v11.5.53 — HTL : anti double-lancement _htlLaunched, z-index FABs 35, user-select pSession
+  ║  v11.5.53 — pSession : FAB musique déplacé droite (avec alerte), + seul à gauche
   ║
   ║  ── BACKLOG pSession CARTES ──────────────────────────────────────────
   ║  • Grille dynamique : ≤6 riders = 2 colonnes / 7-12 riders = 3 colonnes
   ║  • 3 colonnes = 4 lignes × 3 = 12 cartes max, tout visible sans scroll
   ║  • Offre Crew limitée à 12 riders simultanés
   ║  • Au-delà de 12 → offre Association (système futur avec gestion de parole)
-  ║  v11.5.52 — pSession : mini icône BT/HP branchée, point séparateur, hint journal -252px
-  ║  v11.5.52 — pSession : icône HP/BT à droite, toast alerte repositionné, hint journal fix
-  ║  v11.5.52 — pSession : mini icône BT/HP header, suppression sessControlBar, safe-area FABs
-  ║  v11.5.52 — pSession : FAB alerte cycle+toast, bouton QUITTER large, FABs remontés
-  ║  v11.5.52 — audio : label BT/HP simple, suppression popup sélection audio
-  ║  v11.5.52 — audio : preferredDeviceList BT>WiredHS>HP>Ear via AudioSwitchHandler
-  ║  v11.5.52 — audio : forçage HP si pas de BT au RoomEvent.Connected
-  ║  v11.5.52 — getLaunchUrl cold start + alerts debug
-  ║  v11.5.52 — ajout @capacitor/app@8.1.0 : appUrlOpen + getLaunchUrl actifs
-  ║  v11.5.52 — deep link APK : _pendingDeepLink + joinSession via onAuthStateChanged
-  ║  v11.5.52 — appUrlOpen : deep link APK → pSession+joinSession direct
-  ║  v11.5.52 — intent-filter manifest : puter.site (cohérence deep link)
-  ║  v11.5.52 — buildJoinUrl : retour puter.site, assetlinks.json mis à jour
-  ║  v11.5.52 — deep link : github.io/rydercom-legal, intent-filter, assetlinks
-  ║  v11.5.52 — capacitor.config : androidScheme https, deep link WhatsApp
-  ║  v11.5.52 — modales DA quit icônes, swipe bsProfile+bsOffre, MON COMPTE aligné
+  ║  v11.5.53 — pSession : mini icône BT/HP branchée, point séparateur, hint journal -252px
+  ║  v11.5.53 — pSession : icône HP/BT à droite, toast alerte repositionné, hint journal fix
+  ║  v11.5.53 — pSession : mini icône BT/HP header, suppression sessControlBar, safe-area FABs
+  ║  v11.5.53 — pSession : FAB alerte cycle+toast, bouton QUITTER large, FABs remontés
+  ║  v11.5.53 — audio : label BT/HP simple, suppression popup sélection audio
+  ║  v11.5.53 — audio : preferredDeviceList BT>WiredHS>HP>Ear via AudioSwitchHandler
+  ║  v11.5.53 — audio : forçage HP si pas de BT au RoomEvent.Connected
+  ║  v11.5.53 — getLaunchUrl cold start + alerts debug
+  ║  v11.5.53 — ajout @capacitor/app@8.1.0 : appUrlOpen + getLaunchUrl actifs
+  ║  v11.5.53 — deep link APK : _pendingDeepLink + joinSession via onAuthStateChanged
+  ║  v11.5.53 — appUrlOpen : deep link APK → pSession+joinSession direct
+  ║  v11.5.53 — intent-filter manifest : puter.site (cohérence deep link)
+  ║  v11.5.53 — buildJoinUrl : retour puter.site, assetlinks.json mis à jour
+  ║  v11.5.53 — deep link : github.io/rydercom-legal, intent-filter, assetlinks
+  ║  v11.5.53 — capacitor.config : androidScheme https, deep link WhatsApp
+  ║  v11.5.53 — modales DA quit icônes, swipe bsProfile+bsOffre, MON COMPTE aligné
   ║  v11.5.27 — offrePickModal, bsOffre mécanique, DA badges, logoutModal restauré
   ║  v11.5.26 — MON COMPTE liste iOS, badge Crew home, window.myUID fix, Ryders maj
   ║  v11.5.25 — badges DA home, modale choix offre, hint detail, window.db fix
@@ -50,7 +50,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#F5F5F2">
-<title>RyderCom v11.5.52</title>
+<title>RyderCom v11.5.53</title>
 <style>
 /* PRIORITÉ ABSOLUE — FOAD BLOCKER */
 :root { --font-title: 'Syne', sans-serif; --font-body: 'DM Sans', sans-serif; }
@@ -480,7 +480,7 @@ input, button, select, textarea {
 
 /* ── FAB QUITTER v6.0 ── */
 .fab-quit{display:none;}
-.fab-alert-btn{position:fixed;bottom:calc(92px + env(safe-area-inset-bottom));right:16px;width:60px;height:60px;border-radius:50%;background:rgba(34,197,94,.06);box-shadow:0 6px 20px rgba(0,0,0,.10),0 2px 6px rgba(0,0,0,.06);border:1.5px solid rgba(34,197,94,.3);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:30;transition:transform .12s;-webkit-tap-highlight-color:transparent;}
+.fab-alert-btn{position:fixed;bottom:calc(92px + env(safe-area-inset-bottom));right:16px;width:60px;height:60px;border-radius:50%;background:rgba(34,197,94,.06);box-shadow:0 6px 20px rgba(0,0,0,.10),0 2px 6px rgba(0,0,0,.06);border:1.5px solid rgba(34,197,94,.3);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:35;transition:transform .12s;-webkit-tap-highlight-color:transparent;}
 .fab-alert-btn:active{transform:scale(.92);}
 
 /* APK-v1.4 — FAB Musique rond */
@@ -491,7 +491,7 @@ input, button, select, textarea {
   box-shadow:0 2px 6px rgba(0,0,0,.08),0 8px 20px rgba(0,0,0,.10),0 1px 3px rgba(0,0,0,.06);
   border:1.5px solid var(--gray-light);
   display:none;align-items:center;justify-content:center;
-  cursor:pointer;z-index:30;
+  cursor:pointer;z-index:35;
   transition:transform .12s;
   -webkit-tap-highlight-color:transparent;
 }
@@ -843,6 +843,7 @@ input, button, select, textarea {
   transition: background .25s ease;
 }
 
+#pSession { user-select:none; -webkit-user-select:none; }
 /* ══ v7.2 — HTL (Hold To Launch) pHome ══ */
 .htl-zone {
   display: flex; flex-direction: column; align-items: center;
@@ -1192,7 +1193,7 @@ body.keyboard-open #btnLogout {
 
 
 
-/* ══ v11.5.52 — BS PROFIL + BS OFFRE ══ */
+/* ══ v11.5.53 — BS PROFIL + BS OFFRE ══ */
 #bsProfile, #bsOffre {
   position:fixed;bottom:0;left:0;right:0;
   max-width:430px;margin:0 auto;
@@ -1922,17 +1923,17 @@ body.keyboard-open #btnLogout {
 
 <header class="global-header" id="globalHeader">
   <!-- Gauche : brand textuel RyderCom -->
-  <div class="header-brand-text" onclick="goTo('pHome')">R<span class="accent">y</span>der<span class="accent">C</span>om</div>
+  <div class="header-brand-text" style="user-select:none;-webkit-user-select:none;">R<span class="accent">y</span>der<span class="accent">C</span>om</div>
   <!-- Centre : pill titre (centré absolument) -->
   <span id="globalHeaderPageTitle" class="global-header-page-title"></span>
   <!-- Droite : vtag -->
-  <span class="header-vtag">v11.5.52</span>
+  <span class="header-vtag">v11.5.53</span>
 </header>
 
 <!-- ══ ÉCRAN 1 : LOGIN ══ -->
 <div class="page on" id="pLogin">
   <!-- vtag login visible seulement sur cette page -->
-  <div id="loginVtag" style="position:absolute;top:14px;right:14px;font-size:9px;font-weight:700;color:var(--gray);background:var(--gray-light);padding:2px 7px;border-radius:6px;z-index:10;">v11.5.52</div>
+  <div id="loginVtag" style="position:absolute;top:14px;right:14px;font-size:9px;font-weight:700;color:var(--gray);background:var(--gray-light);padding:2px 7px;border-radius:6px;z-index:10;">v11.5.53</div>
   <div class="login-hero">
     <img class="logo-img" id="logo-hero-img" src="logo-hero.png">
     <div style="font-family:var(--font-title);font-size:44px;font-weight:900;letter-spacing:-2px;color:var(--black);margin-top:12px;margin-bottom:6px;line-height:1;">R<span style="color:var(--green);">y</span>der<span style="color:var(--green);">C</span>om</div>
@@ -2389,7 +2390,7 @@ window.deleteAccountExecute  = deleteAccountExecute;
 (function() {
   let _htlTimer = null;
   let _htlActive = false;
-  // v11.5.52 — tap simple : enfoncement + onde + relâchement → createSession
+  // v11.5.53 — tap simple : enfoncement + onde + relâchement → createSession
   function _htlAddWave() {
     const wrap = document.getElementById('htlWrap');
     if (!wrap) return;
@@ -2406,13 +2407,16 @@ window.deleteAccountExecute  = deleteAccountExecute;
     wrap.classList.add('pressing');
     _htlAddWave();
   };
+  let _htlLaunched = false;
   window.htlTouchEnd = function(e) {
     if (e && e.cancelable) e.preventDefault();
-    if (!_htlActive) return;
+    if (!_htlActive || _htlLaunched) return;
+    _htlLaunched = true;
     const wrap = document.getElementById('htlWrap');
     if (wrap) wrap.classList.remove('pressing');
     _htlActive = false;
     setTimeout(function() {
+      _htlLaunched = false;
       try {
         if (typeof createSession === 'function') createSession();
       } catch(err) {
@@ -2724,7 +2728,7 @@ function _syncHomeFabInviteBadge(count) {
 
 // ══ v7.6 — SWIPE DOWN pour fermer bsMeute ══
 document.addEventListener('DOMContentLoaded', function() {
-  // v11.5.52 — swipe down pour fermer bsProfile
+  // v11.5.53 — swipe down pour fermer bsProfile
   const bsProf = document.getElementById('bsProfile');
   if (bsProf) {
     let sy = 0, drag = false;
@@ -2740,7 +2744,7 @@ document.addEventListener('DOMContentLoaded', function() {
       else bsProf.style.transform = '';
     });
   }
-  // v11.5.52 — swipe down pour fermer bsOffre
+  // v11.5.53 — swipe down pour fermer bsOffre
   const bsOff = document.getElementById('bsOffre');
   if (bsOff) {
     let sy = 0, drag = false;
@@ -3290,9 +3294,9 @@ function joinQuitDo()    {
   <!-- v8.8.3 — Bloc titre session : margin-top:52px pour passer sous le header fixe -->
   <div id="sessTitleBar" style="display:none;padding:8px 12px 4px;margin-top:52px;">
     <div style="background:var(--white);border-radius:16px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-      <div style="font-family:var(--font-title);font-size:16px;font-weight:900;color:var(--black);letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%;" id="sessNameLabel">Ryde en cours</div>
+      <div style="font-family:var(--font-title);font-size:16px;font-weight:900;color:var(--black);letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%;user-select:none;-webkit-user-select:none;" id="sessNameLabel">Ryde en cours</div>
       <div style="display:flex;align-items:center;gap:6px;">
-        <div id="sessRiderCount" style="font-size:12px;font-weight:700;color:var(--green);white-space:nowrap;">1 connecté</div>
+        <div id="sessRiderCount" style="font-size:12px;font-weight:700;color:var(--green);white-space:nowrap;user-select:none;-webkit-user-select:none;">1 connecté</div>
         <span style="width:4px;height:4px;border-radius:50%;background:var(--green);opacity:.4;flex-shrink:0;"></span>
         <span id="sessAudioMini" style="display:flex;align-items:center;user-select:none;-webkit-user-select:none;">
           <svg id="sessAudioMiniIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
@@ -3301,7 +3305,7 @@ function joinQuitDo()    {
     </div>
   </div>
 
-  <!-- sessControlBar supprimé v11.5.52 — remplacé par mini icône dans sessTitleBar + FAB alerte -->
+  <!-- sessControlBar supprimé v11.5.53 — remplacé par mini icône dans sessTitleBar + FAB alerte -->
 
   <!-- GRILLE PAVÉS — ma carte [0,0] + carte+ [0,1] fixes, invités après -->
   <div class="riders-scroll" id="ridersList">
@@ -3351,18 +3355,18 @@ function joinQuitDo()    {
     </div>
   </div>
 
-  <!-- FAB Alerte v11.5.52 -->
+  <!-- FAB Alerte v11.5.53 -->
   <div class="fab-alert-btn" id="fabAlert" onclick="cycleSessionAlert()">
     <svg id="fabAlertIcon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
   </div>
-  <!-- Bouton QUITTER large v11.5.52 -->
+  <!-- Bouton QUITTER large v11.5.53 -->
   <div id="btnQuitLarge" style="position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:16px;right:16px;height:52px;border-radius:18px;background:var(--white);border:1.5px solid rgba(239,68,68,.25);display:none;align-items:center;justify-content:center;gap:10px;cursor:pointer;z-index:29;box-shadow:0 2px 10px rgba(239,68,68,.08);-webkit-tap-highlight-color:transparent;" onclick="fabQuitPress()">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
     <span style="font-size:14px;font-weight:800;color:var(--red);letter-spacing:.5px;user-select:none;pointer-events:none;">QUITTER</span>
   </div>
 
   <!-- v8.5e — FAB + blanc, icône noire -->
-  <div id="fabSessionAdd" onclick="sessionShareOpen()" style="position:fixed;bottom:calc(92px + env(safe-area-inset-bottom));left:16px;width:60px;height:60px;border-radius:50%;background:var(--white);box-shadow:0 2px 6px rgba(0,0,0,.08),0 8px 20px rgba(0,0,0,.10),0 1px 3px rgba(0,0,0,.06);border:1.5px solid var(--gray-light);display:none;align-items:center;justify-content:center;cursor:pointer;z-index:30;transition:transform .12s;-webkit-tap-highlight-color:transparent;">
+  <div id="fabSessionAdd" onclick="sessionShareOpen()" style="position:fixed;bottom:calc(92px + env(safe-area-inset-bottom));left:16px;width:60px;height:60px;border-radius:50%;background:var(--white);box-shadow:0 2px 6px rgba(0,0,0,.08),0 8px 20px rgba(0,0,0,.10),0 1px 3px rgba(0,0,0,.06);border:1.5px solid var(--gray-light);display:none;align-items:center;justify-content:center;cursor:pointer;z-index:35;transition:transform .12s;-webkit-tap-highlight-color:transparent;">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--black)" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   </div>
 
@@ -3444,7 +3448,7 @@ function joinQuitDo()    {
 // ══════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════
-const APP_VERSION='v11.5.52';
+const APP_VERSION='v11.5.53';
 const WS_URL='wss://testwave-zq4b8zeh.livekit.cloud';
 const ROOM_NAME='ridercom-test';
 
@@ -3681,9 +3685,9 @@ function goTo(id, fromPopstate){
       header.style.display='flex';
       header.classList.remove('sess-mode');
       header.innerHTML =
-        '<div class="header-brand-text" onclick="goTo(\'pHome\')" style="cursor:pointer;">R<span class="accent">y</span>der<span class="accent">C</span>om</div>' +
+        '<div class="header-brand-text" style="user-select:none;-webkit-user-select:none;">R<span class="accent">y</span>der<span class="accent">C</span>om</div>' +
         '<span id="globalHeaderPageTitle" class="global-header-page-title"></span>' +
-        '<span class="header-vtag">v11.5.52</span>';
+        '<span class="header-vtag">v11.5.53</span>';
     }
     // Mettre à jour le bloc titre session
     const st = document.getElementById('sessNameLabel');
@@ -3724,9 +3728,9 @@ function goTo(id, fromPopstate){
       if(header.classList.contains('sess-mode')){
         header.classList.remove('sess-mode');
         header.innerHTML =
-          '<div class="header-brand-text" onclick="goTo(\'pHome\')" style="cursor:pointer;">R<span class="accent">y</span>der<span class="accent">C</span>om</div>' +
+          '<div class="header-brand-text" style="user-select:none;-webkit-user-select:none;">R<span class="accent">y</span>der<span class="accent">C</span>om</div>' +
           '<span id="globalHeaderPageTitle" class="global-header-page-title"></span>' +
-          '<span class="header-vtag">v11.5.52</span>';
+          '<span class="header-vtag">v11.5.53</span>';
       }
       header.style.display='flex';
     }
@@ -3878,7 +3882,7 @@ window.addEventListener('popstate', function(e){
   }
 })();
 
-// v11.5.52 — appUrlOpen : deep link APK → joinSession direct sans pJoin
+// v11.5.53 — appUrlOpen : deep link APK → joinSession direct sans pJoin
 (function _initAppUrlOpen() {
   function _handleDeepLink(urlStr) {
     try {
@@ -4027,7 +4031,7 @@ auth.onAuthStateChanged(async (user) => {
       }
       // v2206 — nettoyer l'URL après lecture pour éviter les redirections parasites
       if (window.location.search) history.replaceState(null, '', window.location.pathname);
-      // v11.5.52 — deep link APK : si un lien est en attente, joindre direct
+      // v11.5.53 — deep link APK : si un lien est en attente, joindre direct
       if (window._pendingDeepLink) {
         const dl = window._pendingDeepLink;
         window._pendingDeepLink = null;
@@ -7735,7 +7739,7 @@ function _getAudioPlugin() {
   } catch(e) { return null; }
 }
 
-// v11.5.52 — Label audio simplifié : BT ou HP uniquement
+// v11.5.53 — Label audio simplifié : BT ou HP uniquement
 function _updateSourceBtn(idx) {
   sessAudioIdx = idx;
   const iconEl = document.getElementById('sessAudioIcon');
@@ -8015,13 +8019,13 @@ function _initVolBars() {
 // Garde cycleSessionAudio comme alias
 function cycleSessionAudio() { openAudioPopup(null); }
 
-// v11.5.52 — Bouton QUITTER large → ouvre modal existant
+// v11.5.53 — Bouton QUITTER large → ouvre modal existant
 function fabQuitPress() {
   const bd = document.getElementById('quitBackdrop');
   if(bd){ bd.style.display='flex'; requestAnimationFrame(()=>bd.classList.add('show')); }
 }
 
-// v11.5.52 — FAB Alerte cycle + toast DA
+// v11.5.53 — FAB Alerte cycle + toast DA
 let sessAlertState = 0; // 0=toutes, 1=mes alertes, 2=off
 const _ALERT_STATES = [
   { label:'Toutes les alertes', stroke:'var(--green)',  bg:'rgba(34,197,94,.06)',  border:'rgba(34,197,94,.3)'  },
@@ -9757,7 +9761,7 @@ function stopBackgroundPiP() {
   </div>
 </div>
 
-<!-- v11.5.52 — BS PROFIL -->
+<!-- v11.5.53 — BS PROFIL -->
 <div id="bsProfileOverlay" onclick="bsProfileClose()"></div>
 <div id="bsProfile">
   <div class="bsf-handle"></div>
