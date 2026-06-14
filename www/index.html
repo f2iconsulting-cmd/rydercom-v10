@@ -14,23 +14,30 @@
   ║  v11.5.20 — BS Profil+Offre+Suppression ; fix doublon HTML  ║
   ║  v11.5.21 — BS Profil restructurée ; BS Offre vrais pavés   ║
   ║  v11.5.37 — deep link : alerts virées, QR code OK
-  ║  v11.5.49 — pSession : FAB musique déplacé droite (avec alerte), + seul à gauche
-  ║  v11.5.49 — pSession : mini icône BT/HP branchée, point séparateur, hint journal -252px
-  ║  v11.5.49 — pSession : icône HP/BT à droite, toast alerte repositionné, hint journal fix
-  ║  v11.5.49 — pSession : mini icône BT/HP header, suppression sessControlBar, safe-area FABs
-  ║  v11.5.49 — pSession : FAB alerte cycle+toast, bouton QUITTER large, FABs remontés
-  ║  v11.5.49 — audio : label BT/HP simple, suppression popup sélection audio
-  ║  v11.5.49 — audio : preferredDeviceList BT>WiredHS>HP>Ear via AudioSwitchHandler
-  ║  v11.5.49 — audio : forçage HP si pas de BT au RoomEvent.Connected
-  ║  v11.5.49 — getLaunchUrl cold start + alerts debug
-  ║  v11.5.49 — ajout @capacitor/app@8.1.0 : appUrlOpen + getLaunchUrl actifs
-  ║  v11.5.49 — deep link APK : _pendingDeepLink + joinSession via onAuthStateChanged
-  ║  v11.5.49 — appUrlOpen : deep link APK → pSession+joinSession direct
-  ║  v11.5.49 — intent-filter manifest : puter.site (cohérence deep link)
-  ║  v11.5.49 — buildJoinUrl : retour puter.site, assetlinks.json mis à jour
-  ║  v11.5.49 — deep link : github.io/rydercom-legal, intent-filter, assetlinks
-  ║  v11.5.49 — capacitor.config : androidScheme https, deep link WhatsApp
-  ║  v11.5.49 — modales DA quit icônes, swipe bsProfile+bsOffre, MON COMPTE aligné
+  ║  v11.5.50 — HTL : tap simple onde+enfoncement+relâchement, FAB musique right:92px
+  ║  v11.5.50 — pSession : FAB musique déplacé droite (avec alerte), + seul à gauche
+  ║
+  ║  ── BACKLOG pSession CARTES ──────────────────────────────────────────
+  ║  • Grille dynamique : ≤6 riders = 2 colonnes / 7-12 riders = 3 colonnes
+  ║  • 3 colonnes = 4 lignes × 3 = 12 cartes max, tout visible sans scroll
+  ║  • Offre Crew limitée à 12 riders simultanés
+  ║  • Au-delà de 12 → offre Association (système futur avec gestion de parole)
+  ║  v11.5.50 — pSession : mini icône BT/HP branchée, point séparateur, hint journal -252px
+  ║  v11.5.50 — pSession : icône HP/BT à droite, toast alerte repositionné, hint journal fix
+  ║  v11.5.50 — pSession : mini icône BT/HP header, suppression sessControlBar, safe-area FABs
+  ║  v11.5.50 — pSession : FAB alerte cycle+toast, bouton QUITTER large, FABs remontés
+  ║  v11.5.50 — audio : label BT/HP simple, suppression popup sélection audio
+  ║  v11.5.50 — audio : preferredDeviceList BT>WiredHS>HP>Ear via AudioSwitchHandler
+  ║  v11.5.50 — audio : forçage HP si pas de BT au RoomEvent.Connected
+  ║  v11.5.50 — getLaunchUrl cold start + alerts debug
+  ║  v11.5.50 — ajout @capacitor/app@8.1.0 : appUrlOpen + getLaunchUrl actifs
+  ║  v11.5.50 — deep link APK : _pendingDeepLink + joinSession via onAuthStateChanged
+  ║  v11.5.50 — appUrlOpen : deep link APK → pSession+joinSession direct
+  ║  v11.5.50 — intent-filter manifest : puter.site (cohérence deep link)
+  ║  v11.5.50 — buildJoinUrl : retour puter.site, assetlinks.json mis à jour
+  ║  v11.5.50 — deep link : github.io/rydercom-legal, intent-filter, assetlinks
+  ║  v11.5.50 — capacitor.config : androidScheme https, deep link WhatsApp
+  ║  v11.5.50 — modales DA quit icônes, swipe bsProfile+bsOffre, MON COMPTE aligné
   ║  v11.5.27 — offrePickModal, bsOffre mécanique, DA badges, logoutModal restauré
   ║  v11.5.26 — MON COMPTE liste iOS, badge Crew home, window.myUID fix, Ryders maj
   ║  v11.5.25 — badges DA home, modale choix offre, hint detail, window.db fix
@@ -43,7 +50,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#F5F5F2">
-<title>RyderCom v11.5.49</title>
+<title>RyderCom v11.5.50</title>
 <style>
 /* PRIORITÉ ABSOLUE — FOAD BLOCKER */
 :root { --font-title: 'Syne', sans-serif; --font-body: 'DM Sans', sans-serif; }
@@ -478,7 +485,7 @@ input, button, select, textarea {
 
 /* APK-v1.4 — FAB Musique rond */
 .fab-music{
-  position:fixed;bottom:calc(92px + env(safe-area-inset-bottom));right:86px;
+  position:fixed;bottom:calc(92px + env(safe-area-inset-bottom));right:92px;
   width:60px;height:60px;border-radius:50%;
   background:var(--white);
   box-shadow:0 2px 6px rgba(0,0,0,.08),0 8px 20px rgba(0,0,0,.10),0 1px 3px rgba(0,0,0,.06);
@@ -1199,7 +1206,7 @@ body.keyboard-open #btnLogout {
 
 
 
-/* ══ v11.5.49 — BS PROFIL + BS OFFRE ══ */
+/* ══ v11.5.50 — BS PROFIL + BS OFFRE ══ */
 #bsProfile, #bsOffre {
   position:fixed;bottom:0;left:0;right:0;
   max-width:430px;margin:0 auto;
@@ -1933,13 +1940,13 @@ body.keyboard-open #btnLogout {
   <!-- Centre : pill titre (centré absolument) -->
   <span id="globalHeaderPageTitle" class="global-header-page-title"></span>
   <!-- Droite : vtag -->
-  <span class="header-vtag">v11.5.49</span>
+  <span class="header-vtag">v11.5.50</span>
 </header>
 
 <!-- ══ ÉCRAN 1 : LOGIN ══ -->
 <div class="page on" id="pLogin">
   <!-- vtag login visible seulement sur cette page -->
-  <div id="loginVtag" style="position:absolute;top:14px;right:14px;font-size:9px;font-weight:700;color:var(--gray);background:var(--gray-light);padding:2px 7px;border-radius:6px;z-index:10;">v11.5.49</div>
+  <div id="loginVtag" style="position:absolute;top:14px;right:14px;font-size:9px;font-weight:700;color:var(--gray);background:var(--gray-light);padding:2px 7px;border-radius:6px;z-index:10;">v11.5.50</div>
   <div class="login-hero">
     <img class="logo-img" id="logo-hero-img" src="logo-hero.png">
     <div style="font-family:var(--font-title);font-size:44px;font-weight:900;letter-spacing:-2px;color:var(--black);margin-top:12px;margin-bottom:6px;line-height:1;">R<span style="color:var(--green);">y</span>der<span style="color:var(--green);">C</span>om</div>
@@ -2400,58 +2407,47 @@ window.deleteAccountExecute  = deleteAccountExecute;
 (function() {
   let _htlTimer = null;
   let _htlActive = false;
-
+  // v11.5.50 — tap simple : enfoncement + onde + relâchement → createSession
+  function _htlAddWave() {
+    const wrap = document.getElementById('htlWrap');
+    if (!wrap) return;
+    const w = document.createElement('div');
+    w.style.cssText = 'position:absolute;border-radius:50%;opacity:0;pointer-events:none;border:2px solid var(--green);width:180px;height:180px;top:50%;left:50%;transform:translate(-50%,-50%) scale(.6);animation:waveDA 2.8s ease-out forwards;z-index:0;';
+    wrap.appendChild(w);
+    setTimeout(() => { try { wrap.removeChild(w); } catch(e) {} }, 2800);
+  }
   window.htlTouchStart = function(e) {
     if (e && e.cancelable) e.preventDefault();
     const wrap = document.getElementById('htlWrap');
-    const arc = document.getElementById('htlArcCircle');
     if (!wrap || _htlActive) return;
     _htlActive = true;
     wrap.classList.add('pressing');
-    if (arc) {
-      arc.style.strokeDashoffset = '502';
-      arc.style.animation = 'htlArcFill 1.2s linear forwards';
-    }
-    _htlTimer = setTimeout(function() {
-      if (_htlActive) {
-        try {
-          if (typeof createSession === 'function') createSession();
-        } catch(err) {
-          console.error('[RyderCom] Erreur lancement session :', err);
-        }
-      }
-      _htlClearState();
-    }, 1200);
+    _htlAddWave();
   };
-
   window.htlTouchEnd = function(e) {
     if (e && e.cancelable) e.preventDefault();
-    _htlClearState();
+    if (!_htlActive) return;
+    const wrap = document.getElementById('htlWrap');
+    if (wrap) wrap.classList.remove('pressing');
+    _htlActive = false;
+    setTimeout(function() {
+      try {
+        if (typeof createSession === 'function') createSession();
+      } catch(err) {
+        console.error('[RyderCom] Erreur lancement session :', err);
+      }
+    }, 100);
   };
-
   function _htlClearState() {
     _htlActive = false;
-    if (_htlTimer) { clearTimeout(_htlTimer); _htlTimer = null; }
     const wrap = document.getElementById('htlWrap');
-    const arc = document.getElementById('htlArcCircle');
     if (wrap) wrap.classList.remove('pressing');
-    if (arc) {
-      arc.style.animation = 'none';
-      void arc.offsetHeight;
-      arc.style.strokeDashoffset = '502';
-      arc.style.animation = '';
-    }
   }
-
   window.resetHtl = _htlClearState;
-  window.htlTap = function() { window.htlTouchStart(null); };
+  window.htlTap = function() { window.htlTouchStart(null); setTimeout(window.htlTouchEnd, 150); };
 })();
-
-
-
 // v7.9-f — resetHtl stub (conservé pour compatibilité goTo pHome)
 window.resetHtl = function() {};
-
 // ══ v7.4 — OVERLAY HOME + FABs ══
 // ══ v7.7 — BOTTOM SHEET SESSIONS ══
 function homeBsSessionsOpen() {
@@ -2746,7 +2742,7 @@ function _syncHomeFabInviteBadge(count) {
 
 // ══ v7.6 — SWIPE DOWN pour fermer bsMeute ══
 document.addEventListener('DOMContentLoaded', function() {
-  // v11.5.49 — swipe down pour fermer bsProfile
+  // v11.5.50 — swipe down pour fermer bsProfile
   const bsProf = document.getElementById('bsProfile');
   if (bsProf) {
     let sy = 0, drag = false;
@@ -2762,7 +2758,7 @@ document.addEventListener('DOMContentLoaded', function() {
       else bsProf.style.transform = '';
     });
   }
-  // v11.5.49 — swipe down pour fermer bsOffre
+  // v11.5.50 — swipe down pour fermer bsOffre
   const bsOff = document.getElementById('bsOffre');
   if (bsOff) {
     let sy = 0, drag = false;
@@ -3323,7 +3319,7 @@ function joinQuitDo()    {
     </div>
   </div>
 
-  <!-- sessControlBar supprimé v11.5.49 — remplacé par mini icône dans sessTitleBar + FAB alerte -->
+  <!-- sessControlBar supprimé v11.5.50 — remplacé par mini icône dans sessTitleBar + FAB alerte -->
 
   <!-- GRILLE PAVÉS — ma carte [0,0] + carte+ [0,1] fixes, invités après -->
   <div class="riders-scroll" id="ridersList">
@@ -3373,11 +3369,11 @@ function joinQuitDo()    {
     </div>
   </div>
 
-  <!-- FAB Alerte v11.5.49 -->
+  <!-- FAB Alerte v11.5.50 -->
   <div class="fab-alert-btn" id="fabAlert" onclick="cycleSessionAlert()">
     <svg id="fabAlertIcon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
   </div>
-  <!-- Bouton QUITTER large v11.5.49 -->
+  <!-- Bouton QUITTER large v11.5.50 -->
   <div id="btnQuitLarge" style="position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:16px;right:16px;height:52px;border-radius:18px;background:var(--white);border:1.5px solid rgba(239,68,68,.25);display:none;align-items:center;justify-content:center;gap:10px;cursor:pointer;z-index:29;box-shadow:0 2px 10px rgba(239,68,68,.08);-webkit-tap-highlight-color:transparent;" onclick="fabQuitPress()">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
     <span style="font-size:14px;font-weight:800;color:var(--red);letter-spacing:.5px;user-select:none;pointer-events:none;">QUITTER</span>
@@ -3466,7 +3462,7 @@ function joinQuitDo()    {
 // ══════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════
-const APP_VERSION='v11.5.49';
+const APP_VERSION='v11.5.50';
 const WS_URL='wss://testwave-zq4b8zeh.livekit.cloud';
 const ROOM_NAME='ridercom-test';
 
@@ -3705,7 +3701,7 @@ function goTo(id, fromPopstate){
       header.innerHTML =
         '<div class="header-brand-text" onclick="goTo(\'pHome\')" style="cursor:pointer;">R<span class="accent">y</span>der<span class="accent">C</span>om</div>' +
         '<span id="globalHeaderPageTitle" class="global-header-page-title"></span>' +
-        '<span class="header-vtag">v11.5.49</span>';
+        '<span class="header-vtag">v11.5.50</span>';
     }
     // Mettre à jour le bloc titre session
     const st = document.getElementById('sessNameLabel');
@@ -3748,7 +3744,7 @@ function goTo(id, fromPopstate){
         header.innerHTML =
           '<div class="header-brand-text" onclick="goTo(\'pHome\')" style="cursor:pointer;">R<span class="accent">y</span>der<span class="accent">C</span>om</div>' +
           '<span id="globalHeaderPageTitle" class="global-header-page-title"></span>' +
-          '<span class="header-vtag">v11.5.49</span>';
+          '<span class="header-vtag">v11.5.50</span>';
       }
       header.style.display='flex';
     }
@@ -3900,7 +3896,7 @@ window.addEventListener('popstate', function(e){
   }
 })();
 
-// v11.5.49 — appUrlOpen : deep link APK → joinSession direct sans pJoin
+// v11.5.50 — appUrlOpen : deep link APK → joinSession direct sans pJoin
 (function _initAppUrlOpen() {
   function _handleDeepLink(urlStr) {
     try {
@@ -4049,7 +4045,7 @@ auth.onAuthStateChanged(async (user) => {
       }
       // v2206 — nettoyer l'URL après lecture pour éviter les redirections parasites
       if (window.location.search) history.replaceState(null, '', window.location.pathname);
-      // v11.5.49 — deep link APK : si un lien est en attente, joindre direct
+      // v11.5.50 — deep link APK : si un lien est en attente, joindre direct
       if (window._pendingDeepLink) {
         const dl = window._pendingDeepLink;
         window._pendingDeepLink = null;
@@ -7757,7 +7753,7 @@ function _getAudioPlugin() {
   } catch(e) { return null; }
 }
 
-// v11.5.49 — Label audio simplifié : BT ou HP uniquement
+// v11.5.50 — Label audio simplifié : BT ou HP uniquement
 function _updateSourceBtn(idx) {
   sessAudioIdx = idx;
   const iconEl = document.getElementById('sessAudioIcon');
@@ -8037,13 +8033,13 @@ function _initVolBars() {
 // Garde cycleSessionAudio comme alias
 function cycleSessionAudio() { openAudioPopup(null); }
 
-// v11.5.49 — Bouton QUITTER large → ouvre modal existant
+// v11.5.50 — Bouton QUITTER large → ouvre modal existant
 function fabQuitPress() {
   const bd = document.getElementById('quitBackdrop');
   if(bd){ bd.style.display='flex'; requestAnimationFrame(()=>bd.classList.add('show')); }
 }
 
-// v11.5.49 — FAB Alerte cycle + toast DA
+// v11.5.50 — FAB Alerte cycle + toast DA
 let sessAlertState = 0; // 0=toutes, 1=mes alertes, 2=off
 const _ALERT_STATES = [
   { label:'Toutes les alertes', stroke:'var(--green)',  bg:'rgba(34,197,94,.06)',  border:'rgba(34,197,94,.3)'  },
@@ -9779,7 +9775,7 @@ function stopBackgroundPiP() {
   </div>
 </div>
 
-<!-- v11.5.49 — BS PROFIL -->
+<!-- v11.5.50 — BS PROFIL -->
 <div id="bsProfileOverlay" onclick="bsProfileClose()"></div>
 <div id="bsProfile">
   <div class="bsf-handle"></div>
