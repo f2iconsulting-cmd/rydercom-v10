@@ -558,7 +558,7 @@ class RyderComForegroundService : Service() {
         stopSelf()
     }
 
-        }
+    private fun enableMicrophone() {
         serviceScope.launch {
             try {
                 Log.i(TAG, "[MICRO] setMicrophoneEnabled(true) debut")
