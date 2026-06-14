@@ -14,7 +14,7 @@
   ║  v11.5.20 — BS Profil+Offre+Suppression ; fix doublon HTML  ║
   ║  v11.5.21 — BS Profil restructurée ; BS Offre vrais pavés   ║
   ║  v11.5.37 — deep link : alerts virées, QR code OK
-  ║  v11.5.64 — Mon Espace : boutons DA QUITTER, modales déco+suppression, z-index fix
+  ║  v11.5.65 — modales DA unifiées, btnLogout supprimé, logoutModal conforme
   ║  v11.5.63 — pSession : FAB musique déplacé droite (avec alerte), + seul à gauche
   ║
   ║
@@ -1180,7 +1180,6 @@ input, button, select, textarea {
 }
 /* v8.0 — FABs + bouton déco cachés quand clavier ouvert (solution Gemini) */
 body.keyboard-open #homeFabs,
-body.keyboard-open #btnLogout {
   display: none !important;
   visibility: hidden !important;
 }
@@ -1703,20 +1702,7 @@ body.keyboard-open #btnLogout {
   transition: transform .12s;
 }
 #logoutModalCancel:active { transform: scale(.97); }
-#logoutModalConfirm {
-  flex: 1;
-  height: 52px;
-  background: rgba(239,68,68,.08);
-  border: 1.5px solid rgba(239,68,68,.25);
-  border-radius: 16px;
-  font-family: var(--font-body);
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--red);
-  cursor: pointer;
-  transition: transform .12s;
-}
-#logoutModalConfirm:active { transform: scale(.97); }
+
 
 /* ── GLOBAL HEADER ── */
 .global-header{
@@ -2069,14 +2055,6 @@ body.keyboard-open #btnLogout {
     <div id="quickReconnectBtn" onclick="quickReconnect()" style="display:none;cursor:pointer;margin:6px 16px 8px;padding:13px 18px;background:var(--bg);border-radius:16px;border:1.5px solid var(--gray-light);text-align:center;">
       <div id="quickReconnectName" style="font-family:var(--font-title);font-size:15px;font-weight:700;color:var(--black);letter-spacing:-.3px;">Ryde</div>
     </div>
-  </div>
-  <div id="bsSessionsTrigger" style="display:none;"></div>
-
-<!-- v7.9-m — Bouton Déconnexion fixe en bas de page -->
-<button onclick="showLogoutModal()" id="btnLogout" style="position:fixed;bottom:calc(8px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:none;border:none;padding:12px 24px;font-size:14px;font-weight:600;color:var(--gray);cursor:pointer;display:none;align-items:center;gap:7px;z-index:99;opacity:.7;white-space:nowrap;">
-  <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-  Déconnexion
-</button>
 
 
 </div>
@@ -3727,7 +3705,6 @@ function goTo(id, fromPopstate){
     if(loginVtag) loginVtag.style.display='block';
     // v7.4 — masquer FABs home
     const hf = document.getElementById('homeFabs'); if(hf) hf.style.display='none';
-    const bl = document.getElementById('btnLogout'); if(bl) bl.style.display='none';
   } else if(id==='pSession'){
     // v8.6 — header standard, titre session dans bloc dédié
     if(header){
@@ -3757,7 +3734,6 @@ function goTo(id, fromPopstate){
     if(tb) tb.style.display='block';
     // v7.4 — masquer FABs home
     const hf = document.getElementById('homeFabs'); if(hf) hf.style.display='none';
-    const bl = document.getElementById('btnLogout'); if(bl) bl.style.display='none';
   } else {
     // APK-v3.0 — cacher FAB musique hors session
     const fm = document.getElementById('fabMusic');
@@ -3790,7 +3766,6 @@ function goTo(id, fromPopstate){
     const hf = document.getElementById('homeFabs');
     if(hf) hf.style.display = (id === 'pHome') ? 'flex' : 'none';
     // v7.9-m — Bouton déconnexion fixe uniquement sur pHome
-    const bl = document.getElementById('btnLogout');
     if(bl) bl.style.display = (id === 'pHome') ? 'flex' : 'none';
     log('[NAV] goTo(' + id + ')', id === 'pHome' ? 'warn' : 'info');
   }
@@ -8895,10 +8870,10 @@ function stopBackgroundPiP() {
 </div>
 <div class="quit-backdrop" id="logoutModal" style="display:none;">
   <div class="quit-modal">
-    <div class="quit-icon" style="background:rgba(0,0,0,.06);font-size:24px;">👋</div>
+    <div class="quit-icon" style="background:rgba(239,68,68,.10);font-size:24px;">👋</div>
     <div class="quit-title">Se déconnecter</div>
     <div class="quit-sub">Êtes-vous sûr(e) de vouloir vous déconnecter ?</div>
-    <button id="logoutModalConfirm" class="quit-btn-r" style="background:var(--black);" onclick="hideLogoutModal();logout();">Se déconnecter</button>
+    <button id="logoutModalConfirm" class="quit-btn-r" onclick="hideLogoutModal();logout();">Se déconnecter</button>
     <button id="logoutModalCancel" class="quit-btn-g" onclick="hideLogoutModal()">Annuler</button>
   </div>
 </div>
