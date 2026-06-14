@@ -72,14 +72,11 @@ class RyderComForegroundService : Service() {
         fun getService(): RyderComForegroundService = this@RyderComForegroundService
     }
     private var activeAudioHandler: AudioSwitchHandler? = null
-    private var userMuted = false
-
     fun muteMic(muted: Boolean) {
-        userMuted = muted
         serviceScope.launch {
             try {
                 room?.localParticipant?.setMicrophoneEnabled(!muted)
-                Log.i(TAG, "[MICRO] muteMic($muted) — micro ${if(muted) "MUTÉ" else "ACTIF"}")
+                Log.i(TAG, "[MICRO] muteMic($muted)")
                 updateState(if(muted) "MICRO_MUTED" else "MICRO_ACTIVE")
             } catch(e: Exception) { Log.e(TAG, "[MICRO] Erreur muteMic: ${e.message}") }
         }
@@ -561,10 +558,6 @@ class RyderComForegroundService : Service() {
         stopSelf()
     }
 
-    private fun enableMicrophone() {
-        if (userMuted) {
-            Log.i(TAG, "[MICRO] enableMicrophone ignoré — userMuted=true")
-            return
         }
         serviceScope.launch {
             try {

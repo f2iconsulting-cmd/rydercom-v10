@@ -172,6 +172,12 @@ public class RyderComNativeAudioPlugin extends Plugin
         call.resolve();
     }
     @PluginMethod
+    public void muteMic(PluginCall call) {
+        boolean muted = Boolean.TRUE.equals(call.getBoolean("muted", false));
+        if (boundService != null) boundService.muteMic(muted);
+        call.resolve();
+    }
+    @PluginMethod
     public void setSpeaker(PluginCall call) {
         if (boundService != null) boundService.selectSpeaker();
         call.resolve();
