@@ -425,6 +425,11 @@ class RyderComForegroundService : Service() {
                         Log.w(TAG, "[LIVEKIT] ConnectionQualityChanged: $quality identity=$identity")
                         updateState("CONN_QUALITY:$identity:$quality")
                     }
+                    is RoomEvent.ActiveSpeakersChanged -> {
+                        val speakerIds = event.speakers.map { it.identity?.value ?: "" }.filter { it.isNotEmpty() }
+                        updateState("ACTIVE_SPEAKERS:${speakerIds.joinToString(",")}")
+                        Log.i(TAG, "[LIVEKIT] ActiveSpeakersChanged: $speakerIds")
+                    }
                     is RoomEvent.TrackStreamStateChanged -> {
                         val state = event.streamState
                         val kind = event.trackPublication.kind
